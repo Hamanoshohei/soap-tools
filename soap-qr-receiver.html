@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>服薬指導 QR受信・AI変換ツール v1.1</title>
+<style>
+  :root {
+    --bg: #0a0f1a; --surface: #111827; --surface2: #1f2937; --border: #374151;
+    --accent: #10b981; --accent2: #3b82f6; --danger: #ef4444; --warn: #f59e0b;
+    --text: #f9fafb; --text2: #9ca3af; --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI','Meiryo UI',Meiryo,sans-serif; font-size: 14px; min-height: 100vh; }
+  header { background: linear-gradient(135deg, #064e3b, #065f46); padding: 14px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+  header h1 { font-size: 16px; font-weight: 700; }
+  header .badge { background: rgba(255,255,255,0.2); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+  .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+  .stepper { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 24px; }
+  .step-tab { flex: 1; padding: 10px 4px; text-align: center; font-size: 11px; color: var(--text2); border-right: 1px solid var(--border); cursor: default; }
+  .step-tab:last-child { border-right: none; }
+  .step-tab.active { background: var(--accent); color: #fff; font-weight: 700; }
+  .step-tab.done { color: var(--accent); }
+  .step-num { font-size: 16px; font-weight: 700; display: block; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  .card-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  input[type=text], input[type=password], textarea, select {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text); padding: 10px 12px; font-size: 13px; font-family: inherit; width: 100%;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; line-height: 1.7; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent2); color: #fff; }
+  .btn-success { background: var(--accent); color: #fff; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-warn { background: var(--warn); color: #fff; }
+  .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  #cameraWrap { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
+  #videoEl { width: 100%; border-radius: var(--radius); background: #000; display: block; }
+  #scanOverlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+  #scanOverlay .scan-line { position: absolute; left: 10%; right: 10%; height: 2px; background: rgba(16,185,129,0.8); animation: scanAnim 2s ease-in-out infinite; }
+  @keyframes scanAnim { 0%{top:10%} 50%{top:85%} 100%{top:10%} }
+  #scanOverlay .corner { position: absolute; width: 24px; height: 24px; border-color: var(--accent); border-style: solid; }
+  #scanOverlay .tl { top:8%;left:8%;border-width:3px 0 0 3px; } #scanOverlay .tr { top:8%;right:8%;border-width:3px 3px 0 0; }
+  #scanOverlay .bl { bottom:8%;left:8%;border-width:0 0 3px 3px; } #scanOverlay .br { bottom:8%;right:8%;border-width:0 3px 3px 0; }
+  .scan-progress { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; }
+  .progress-bar-outer { width: 100%; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .progress-bar-inner { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 0.3s; }
+  .chunk-chips { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+  .chunk-chip { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); color: var(--text2); }
+  .chunk-chip.received { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .status-msg { font-size: 13px; font-weight: 600; color: var(--accent); text-align: center; }
+  .session-tag { font-family: monospace; font-size: 12px; color: var(--accent2); }
+  .soap-output { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+  .qr-out-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  #outCanvas { border: 4px solid #fff; background: #fff; border-radius: 4px; }
+  .qr-nav { display: flex; gap: 8px; align-items: center; }
+  .notice { background: var(--surface2); border-left: 3px solid var(--warn); border-radius: 0 var(--radius) var(--radius) 0; padding: 10px 14px; font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+  .notice strong { color: var(--warn); }
+  .info-box { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: var(--radius); padding: 10px 14px; font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+  .privacy-badge { display: inline-flex; align-items: center; gap: 4px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); border-radius: 4px; padding: 3px 8px; font-size: 11px; color: var(--accent); font-weight: 600; }
+  .label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .mt8 { margin-top: 8px; }
+  .api-row { display: flex; gap: 8px; }
+  .api-row input { flex: 1; }
+  .model-new { color: var(--accent); font-size: 11px; font-weight: 600; }
+
+  /* ===== iOS Safari / スマホ最適化 ===== */
+  @media (max-width: 640px) {
+    body { font-size: 15px; }
+    header { padding: 10px 12px; }
+    header h1 { font-size: 13px; }
+    header .badge { font-size: 10px; padding: 2px 6px; }
+    .container { padding: 10px; }
+
+    /* iOSズームイン防止: フォントサイズ16px強制 */
+    input[type=text], input[type=password], textarea, select {
+      font-size: 16px !important;
+    }
+
+    /* タッチターゲット最小44px */
+    .btn {
+      min-height: 44px;
+      padding: 11px 14px;
+      font-size: 14px;
+    }
+
+    /* ステッパー */
+    .stepper { margin-bottom: 16px; }
+    .step-tab { padding: 8px 2px; font-size: 9px; }
+    .step-num { font-size: 14px; }
+
+    /* カード */
+    .card { padding: 12px; margin-bottom: 12px; }
+
+    /* テキストエリア */
+    textarea { min-height: 100px; }
+
+    /* アクション行 */
+    .action-row { gap: 8px; }
+    .action-row .btn { flex: 1 1 auto; justify-content: center; }
+
+    /* カメラビュー: スマホで全幅に */
+    #cameraWrap { max-width: 100%; }
+    #videoEl { max-height: 60vw; object-fit: cover; }
+    .scan-progress { padding: 8px 4px; }
+    .status-msg { font-size: 14px; }
+
+    /* QR出力 */
+    #outCanvas { max-width: calc(100vw - 40px) !important; height: auto !important; }
+    .qr-nav { flex-wrap: wrap; justify-content: center; }
+    .qr-nav .btn { flex: 1 1 auto; }
+
+    /* SOAPテキスト */
+    .soap-output { font-size: 14px; line-height: 1.7; }
+
+    /* プログレスチップ */
+    .chunk-chip { padding: 4px 8px; font-size: 12px; }
+
+    /* API行 */
+    .api-row { flex-direction: row; }
+    .label { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2a7 7 0 00-7 7 7 7 0 007 7 7 7 0 007-7 7 7 0 00-7-7zm-1 5h2v3h3v2h-3v3h-2v-3H8v-2h3V7z"/></svg>
+  <h1>服薬指導 QR受信・AI変換ツール</h1>
+  <span class="badge">Gemini AI</span>
+  <span class="badge">v1.1</span>
+</header>
+
+<div class="container">
+
+  <div class="stepper">
+    <div class="step-tab active" id="tab1"><span class="step-num">①</span>API設定</div>
+    <div class="step-tab" id="tab2"><span class="step-num">②</span>QRスキャン</div>
+    <div class="step-tab" id="tab3"><span class="step-num">③</span>SOAP変換</div>
+    <div class="step-tab" id="tab4"><span class="step-num">④</span>出力QR</div>
+  </div>
+
+  <!-- PANEL 1: API設定 -->
+  <div class="panel active" id="panel1">
+    <div class="notice">
+      <strong>⚠ 注意：</strong>このツールはインターネット接続が必要です。Gemini API Keyは端末内にのみ保存されます（サーバー送信なし）。
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        Gemini API設定
+      </div>
+      <div class="label">Google AI Studio APIキー <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent2);font-size:11px;">（取得はこちら）</a></div>
+      <div class="api-row">
+        <input type="password" id="apiKey" placeholder="AIza..." autocomplete="off">
+        <button class="btn btn-ghost" onclick="toggleApiKeyVisibility()">👁</button>
+      </div>
+      <div class="mt8">
+        <div class="label">使用モデル</div>
+        <select id="modelSelect">
+          <option value="gemini-3-flash" selected>gemini-3-flash 🔥 最新・推奨</option>
+          <option value="gemini-2.5-flash">gemini-2.5-flash ⚡ 安定版</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        SOAPプロンプト
+        <span class="privacy-badge">🔒 個人情報保護指示込み</span>
+      </div>
+      <textarea id="systemPrompt" rows="24">あなたは病院薬剤師のSOAP記録作成を支援するAIです。
+入力された【カルテ情報】と【患者会話録（音声文字起こし）】をもとに、以下の形式でSOAP記録を作成してください。
+
+【プライバシー保護】（厳守）
+- 入力テキスト中の【氏名削除】【フリガナ削除】【生年月日削除】【住所削除】【電話番号削除】【保険証番号削除】【ID削除】は個人情報フィルターにより削除済のマーカーです
+- これらのマーカーおよび患者の個人を特定できる情報（氏名・生年月日・住所・電話番号・保険証番号等）を出力に一切含めないこと
+- 年齢・性別・診断名・検査値・処方内容など臨床情報はすべて保持すること
+
+【出力形式と記載要件】
+
+S: （主観的情報）
+【患者会話録】の入力がある場合：患者・家族の発言・訴え・服薬に関する主観的情報をすべて記載すること
+患者の言葉をできるだけそのまま引用し、薬剤師の聴取内容・患者の反応も含めること
+【患者会話録】の入力がない場合：「S: （薬剤師が直接追記）」とのみ記載すること
+
+O: （客観的情報）※カルテ情報をすべて漏れなく記載すること。省略・要約しないこと。
+【現病歴・主訴】入院経緯・主病態を記載
+【既往歴】すべての既往疾患を列挙
+【アレルギー・副作用歴】薬剤名・症状・重症度を記載（なければ「なし」）
+【入院中処方薬】薬剤名・用量・用法・投与経路をすべて列挙
+【持参薬】薬剤名・用量・用法・コンプライアンス状況を記載（なければ「なし」）
+【直近の検査値】腎機能（Cr/eGFR/BUN）・肝機能（AST/ALT/T-bil）・電解質（Na/K/Cl）・血糖・HbA1c・その他関連値を日付付きで記載
+【バイタル】血圧・脈拍・体温・SpO2・体重を記載（得られた情報のみ）
+
+A: （薬学的評価）
+SとOの情報を総合して読み取れる薬学的問題点をすべて「#1. 」「#2. 」...の番号付きで記載
+各問題点は「問題の内容」「根拠となるデータ」「臨床的重要度」を含めること
+
+P: （薬剤師計画）
+各問題点（#番号対応）について薬剤師としての具体的対応を箇条書きで記載
+用量調整・モニタリングパラメータ・患者指導内容・医師への提言を含めること
+
+【記載上の注意】
+- カルテ情報はすべてOに転記すること（情報の取捨選択・省略をしないこと）
+- 会話録からの患者の主訴・懸念・理解度はSに記載すること
+- 腎機能・肝機能低下時の用量調整、薬物相互作用、ハイリスク薬の管理は必ず明記
+- 医療専門用語を使用し、日本語で出力すること
+- 情報が不足している項目は「情報なし」と記載し、推測・補完はしないこと</textarea>
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-success" onclick="proceedToScan()">カメラスキャン開始 →</button>
+    </div>
+  </div>
+
+  <!-- PANEL 2: QRスキャン -->
+  <div class="panel" id="panel2">
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+        QRコードスキャン
+        <span class="session-tag" id="scanSessionTag"></span>
+      </div>
+
+      <div id="noBarcodeDetector" style="display:none;" class="notice">
+        <strong>⚠ BarcodeDetector API 未対応ブラウザです。</strong><br>
+        Chrome / Edge / Safari 17+ をご使用ください。または下の「手動入力」をお使いください。
+      </div>
+
+      <div id="cameraSection">
+        <div id="cameraWrap">
+          <video id="videoEl" autoplay playsinline muted></video>
+          <div id="scanOverlay">
+            <div class="scan-line"></div>
+            <div class="corner tl"></div><div class="corner tr"></div>
+            <div class="corner bl"></div><div class="corner br"></div>
+          </div>
+        </div>
+        <div class="scan-progress">
+          <div class="status-msg" id="scanStatus">📷 カメラ起動待機中...</div>
+          <!-- SOAPQR progress -->
+          <div id="soapProgressWrap" style="width:100%;max-width:400px;display:none;">
+            <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;">📋 カルテ情報 (SOAPQR)</div>
+            <div class="progress-bar-outer"><div class="progress-bar-inner" id="soapProgress" style="width:0%"></div></div>
+            <div id="soapChips" class="chunk-chips" style="margin-top:4px;"></div>
+          </div>
+          <!-- VOICEQR progress -->
+          <div id="voiceProgressWrap" style="width:100%;max-width:400px;display:none;margin-top:8px;">
+            <div style="font-size:11px;color:#a78bfa;font-weight:600;margin-bottom:4px;">🎙 患者会話録 (VOICEQR)</div>
+            <div class="progress-bar-outer"><div class="progress-bar-inner" id="voiceProgress" style="width:0%;background:linear-gradient(90deg,#8b5cf6,#a78bfa)"></div></div>
+            <div id="voiceChips" class="chunk-chips" style="margin-top:4px;"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text2)" id="scanDetail">送信側のQRコードにカメラを向けてください</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+        <div class="card-title" style="font-size:12px;">手動入力（テスト用・スキャン不可時）</div>
+        <textarea id="manualInput" placeholder="QRコードの内容を直接貼り付け（複数行可）&#10;例: SOAPQR|AB12|1/3|テキスト内容...&#10;例: VOICEQR|XY34|1/2|患者会話内容..." rows="4"></textarea>
+        <div class="action-row">
+          <button class="btn btn-ghost" style="font-size:12px;" onclick="processManualInput()">📥 手動テキストを読み込む</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-ghost" onclick="stopCamera(); goToPanel(1)">← 戻る</button>
+      <button class="btn btn-success" id="btnStartAI" onclick="startSOAPConversion()" disabled>
+        ✨ SOAP変換開始 →
+      </button>
+    </div>
+  </div>
+
+  <!-- PANEL 3: SOAP変換 -->
+  <div class="panel" id="panel3">
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        受信テキスト（カルテ情報 ＋ 患者会話録）
+        <span class="privacy-badge">🔒 個人情報フィルター適用済</span>
+      </div>
+      <div class="soap-output" id="receivedText" style="max-height:150px;overflow-y:auto;font-size:12px;color:var(--text2);">-</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+        SOAP変換結果
+        <span id="aiModelBadge" style="font-size:11px;font-weight:400;color:var(--text2);"></span>
+      </div>
+      <div id="aiLoading" style="display:none;text-align:center;padding:20px;color:var(--text2);">
+        <div style="font-size:24px;">⏳</div>
+        <div style="margin-top:8px;font-size:13px;">Gemini AIが変換中...</div>
+      </div>
+      <textarea class="soap-output" id="soapOutput" style="min-height:200px;font-family:inherit;font-size:13px;background:var(--bg);border:none;padding:0;width:100%;" placeholder="AI変換結果がここに表示されます..."></textarea>
+    </div>
+
+    <div class="card" style="padding:12px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="copySOAP()">📋 コピー</button>
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="document.getElementById('soapOutput').focus()">✏ 編集</button>
+        <button class="btn btn-success" style="font-size:12px;" onclick="generateOutputQR()">QR化して返送 →</button>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-ghost" onclick="goToPanel(2)">← 戻る</button>
+    </div>
+  </div>
+
+  <!-- PANEL 4: 出力QR -->
+  <div class="panel" id="panel4">
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 3v-3h3v3h-3zm0 4v-3h3v3h-3zm3 0v-3h3v3h-3zm0-4v-3h3v3h-3z"/></svg>
+        出力QRコード（バーコードリーダーで読み取り）
+      </div>
+      <div class="info-box">
+        📌 バーコードリーダーでこのQRを読み取ると、カルテ入力欄にSOAPテキストが自動入力されます。<br>
+        <strong>Space</strong> 再生/停止 ｜ <strong>← →</strong> 前後移動
+      </div>
+      <div class="qr-out-wrap">
+        <canvas id="outCanvas" width="320" height="320"></canvas>
+        <div style="font-size:20px;font-weight:700;" id="outProgress">- / -</div>
+        <div class="progress-bar-outer" style="max-width:300px;width:100%;">
+          <div class="progress-bar-inner" id="outProgressFill" style="width:0%"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);text-align:center;max-width:320px;word-break:break-all;" id="outChunkInfo"></div>
+        <div class="qr-nav">
+          <button class="btn btn-ghost" onclick="outPrev()">⏮</button>
+          <button class="btn btn-primary" id="outPlayBtn" onclick="outTogglePlay()">▶ 開始</button>
+          <button class="btn btn-ghost" onclick="outNext()">⏭</button>
+          <span style="font-size:12px;color:var(--accent);padding:4px 8px;background:var(--surface2);border-radius:4px;" id="outTimer">待機中</span>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:4px;">
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="outLoop"> ループ再生
+          </label>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+            <label style="color:var(--text2);">切替間隔(秒):</label>
+            <input type="number" id="outInterval" value="0.5" step="0.1" min="0.1" max="5" style="width:60px;">
+          </div>
+          <button class="btn btn-ghost" style="font-size:12px;padding:5px 10px;" onclick="outRestart()">↩ 最初から</button>
+        </div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-ghost" onclick="goToPanel(3)">← 編集に戻る</button>
+      <button class="btn btn-success" onclick="resetAll()">🔄 新しいスキャン</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// QRCode Library (Kazuhiko Arase, MIT License) - Browser版
+// ============================================================
+var QRMode={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8};
+var QRErrorCorrectLevel={L:1,M:0,Q:3,H:2};
+var QRMath=(function(){var E=new Array(256),L=new Array(256);for(var i=0;i<8;i++)E[i]=1<<i;for(var i=8;i<256;i++)E[i]=E[i-4]^E[i-5]^E[i-6]^E[i-8];for(var i=0;i<255;i++)L[E[i]]=i;return{glog:function(n){if(n<1)throw new Error('glog('+n+')');return L[n];},gexp:function(n){while(n<0)n+=255;while(n>=256)n-=255;return E[n];}};})();
+function QRPolynomial(num,shift){var o=0;while(o<num.length&&num[o]===0)o++;this.num=new Array(num.length-o+shift);for(var i=0;i<num.length-o;i++)this.num[i]=num[i+o];}
+QRPolynomial.prototype={get:function(i){return this.num[i];},getLength:function(){return this.num.length;},multiply:function(e){var n=new Array(this.getLength()+e.getLength()-1);for(var i=0;i<this.getLength();i++)for(var j=0;j<e.getLength();j++)n[i+j]^=QRMath.gexp(QRMath.glog(this.get(i))+QRMath.glog(e.get(j)));return new QRPolynomial(n,0);},mod:function(e){if(this.getLength()-e.getLength()<0)return this;var r=QRMath.glog(this.get(0))-QRMath.glog(e.get(0)),n=new Array(this.getLength());for(var i=0;i<this.getLength();i++)n[i]=this.get(i);for(var x=0;x<e.getLength();x++)n[x]^=QRMath.gexp(QRMath.glog(e.get(x))+r);return new QRPolynomial(n,0).mod(e);}};
+function QRBitBuffer(){this.buffer=[];this.length=0;}
+QRBitBuffer.prototype={get:function(i){return((this.buffer[Math.floor(i/8)]>>>(7-i%8))&1)===1;},put:function(n,l){for(var i=0;i<l;i++)this.putBit(((n>>>(l-i-1))&1)===1);},getLengthInBits:function(){return this.length;},putBit:function(b){var bi=Math.floor(this.length/8);if(this.buffer.length<=bi)this.buffer.push(0);if(b)this.buffer[bi]|=(0x80>>>(this.length%8));this.length++;}};
+function QR8bitByte(data){this.mode=QRMode.MODE_8BIT_BYTE;this.data=data;this.bytes=new TextEncoder().encode(data);}
+QR8bitByte.prototype={getLength:function(){return this.bytes.length;},write:function(b){for(var i=0;i<this.bytes.length;i++)b.put(this.bytes[i],8);}};
+var QRRSBlock=(function(){var T=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16]];
+function getBlocks(v,e){var rb=T[(v-1)*4+(e===QRErrorCorrectLevel.L?0:e===QRErrorCorrectLevel.M?1:e===QRErrorCorrectLevel.Q?2:3)];if(!rb)throw new Error('bad rs block');var len=rb.length/3,list=[];for(var i=0;i<len;i++)for(var j=0;j<rb[i*3];j++)list.push({totalCount:rb[i*3+1],dataCount:rb[i*3+2]});return list;}
+return{getRSBlocks:getBlocks};})();
+var QRUtil=(function(){var PP=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]];
+var G15=(1<<10)|(1<<8)|(1<<5)|(1<<4)|(1<<2)|(1<<1)|(1<<0),G18=(1<<12)|(1<<11)|(1<<10)|(1<<9)|(1<<8)|(1<<5)|(1<<2)|(1<<0),G15M=(1<<14)|(1<<12)|(1<<10)|(1<<4)|(1<<1);
+function bchd(d){var n=0;while(d!==0){n++;d>>>=1;}return n;}
+return{getBCHTypeInfo:function(d){var x=d<<10;while(bchd(x)-bchd(G15)>=0)x^=(G15<<(bchd(x)-bchd(G15)));return((d<<10)|x)^G15M;},getBCHTypeNumber:function(d){var x=d<<12;while(bchd(x)-bchd(G18)>=0)x^=(G18<<(bchd(x)-bchd(G18)));return(d<<12)|x;},getPatternPosition:function(v){return PP[v-1];},getMask:function(p,i,j){switch(p){case 0:return(i+j)%2===0;case 1:return i%2===0;case 2:return j%3===0;case 3:return(i+j)%3===0;case 4:return(Math.floor(i/2)+Math.floor(j/3))%2===0;case 5:return(i*j)%2+(i*j)%3===0;case 6:return((i*j)%2+(i*j)%3)%2===0;case 7:return((i*j)%3+(i+j)%2)%2===0;default:throw new Error('bad mask:'+p);}},getErrorCorrectPolynomial:function(n){var a=new QRPolynomial([1],0);for(var i=0;i<n;i++)a=a.multiply(new QRPolynomial([1,QRMath.gexp(i)],0));return a;},getLengthInBits:function(m,t){if(t<10){if(m===4)return 8;return 10;}else if(t<27){if(m===4)return 16;return 11;}else{if(m===4)return 16;return 13;}},getLostPoint:function(qr){var n=qr.getModuleCount(),lp=0,r,c;for(r=0;r<n;r++)for(c=0;c<n;c++){var sc=0,dk=qr.isDark(r,c);for(var dr=-1;dr<=1;dr++){if(r+dr<0||n<=r+dr)continue;for(var dc=-1;dc<=1;dc++){if(c+dc<0||n<=c+dc||dr===0&&dc===0)continue;if(dk===qr.isDark(r+dr,c+dc))sc++;}}if(sc>5)lp+=3+sc-5;}for(r=0;r<n-1;r++)for(c=0;c<n-1;c++){var cnt=0;if(qr.isDark(r,c))cnt++;if(qr.isDark(r+1,c))cnt++;if(qr.isDark(r,c+1))cnt++;if(qr.isDark(r+1,c+1))cnt++;if(cnt===0||cnt===4)lp+=3;}for(r=0;r<n;r++)for(c=0;c<n-6;c++)if(qr.isDark(r,c)&&!qr.isDark(r,c+1)&&qr.isDark(r,c+2)&&qr.isDark(r,c+3)&&qr.isDark(r,c+4)&&!qr.isDark(r,c+5)&&qr.isDark(r,c+6))lp+=40;for(c=0;c<n;c++)for(r=0;r<n-6;r++)if(qr.isDark(r,c)&&!qr.isDark(r+1,c)&&qr.isDark(r+2,c)&&qr.isDark(r+3,c)&&qr.isDark(r+4,c)&&!qr.isDark(r+5,c)&&qr.isDark(r+6,c))lp+=40;var dk=0;for(c=0;c<n;c++)for(r=0;r<n;r++)if(qr.isDark(r,c))dk++;lp+=Math.abs(100*dk/n/n-50)/5*10;return lp;}};})();
+function QRCode(t,e){this.typeNumber=t;this.errorCorrectLevel=e;this.modules=null;this.moduleCount=0;this.dataCache=null;this.dataList=[];}
+QRCode.PAD0=0xEC;QRCode.PAD1=0x11;
+QRCode.prototype={addData:function(d){this.dataList.push(new QR8bitByte(d));this.dataCache=null;},isDark:function(r,c){return this.modules[r][c];},getModuleCount:function(){return this.moduleCount;},make:function(){if(this.typeNumber<1){for(var t=1;t<40;t++){var rs=QRRSBlock.getRSBlocks(t,this.errorCorrectLevel),buf=new QRBitBuffer(),tot=0;for(var i=0;i<rs.length;i++)tot+=rs[i].dataCount;for(var x=0;x<this.dataList.length;x++){var d=this.dataList[x];buf.put(d.mode,4);buf.put(d.getLength(),QRUtil.getLengthInBits(d.mode,t));d.write(buf);}if(buf.getLengthInBits()<=tot*8){this.typeNumber=t;break;}}}this.makeImpl(false,this.getBestMaskPattern());},makeImpl:function(test,mp){this.moduleCount=this.typeNumber*4+17;this.modules=[];for(var r=0;r<this.moduleCount;r++){this.modules[r]=[];for(var c=0;c<this.moduleCount;c++)this.modules[r][c]=null;}this.setupPositionProbePattern(0,0);this.setupPositionProbePattern(this.moduleCount-7,0);this.setupPositionProbePattern(0,this.moduleCount-7);this.setupPositionAdjustPattern();this.setupTimingPattern();this.setupTypeInfo(test,mp);if(this.typeNumber>=7)this.setupTypeNumber(test);if(this.dataCache===null)this.dataCache=QRCode.createData(this.typeNumber,this.errorCorrectLevel,this.dataList);this.mapData(this.dataCache,mp);},setupPositionProbePattern:function(row,col){for(var r=-1;r<=7;r++){if(row+r<=-1||this.moduleCount<=row+r)continue;for(var c=-1;c<=7;c++){if(col+c<=-1||this.moduleCount<=col+c)continue;this.modules[row+r][col+c]=((0<=r&&r<=6&&(c===0||c===6))||(0<=c&&c<=6&&(r===0||r===6))||(2<=r&&r<=4&&2<=c&&c<=4));}}},getBestMaskPattern:function(){var ml=0,p=0;for(var i=0;i<8;i++){this.makeImpl(true,i);var lp=QRUtil.getLostPoint(this);if(i===0||ml>lp){ml=lp;p=i;}}return p;},setupTimingPattern:function(){for(var r=8;r<this.moduleCount-8;r++){if(this.modules[r][6]!==null)continue;this.modules[r][6]=(r%2===0);}for(var c=8;c<this.moduleCount-8;c++){if(this.modules[6][c]!==null)continue;this.modules[6][c]=(c%2===0);}},setupPositionAdjustPattern:function(){var pos=QRUtil.getPatternPosition(this.typeNumber);for(var i=0;i<pos.length;i++)for(var j=0;j<pos.length;j++){var row=pos[i],col=pos[j];if(this.modules[row][col]!==null)continue;for(var r=-2;r<=2;r++)for(var c=-2;c<=2;c++)this.modules[row+r][col+c]=(Math.abs(r)===2||Math.abs(c)===2||(r===0&&c===0));}},setupTypeNumber:function(test){var bits=QRUtil.getBCHTypeNumber(this.typeNumber),mod;for(var i=0;i<18;i++){mod=(!test&&((bits>>i)&1)===1);this.modules[Math.floor(i/3)][i%3+this.moduleCount-8-3]=mod;}for(var x=0;x<18;x++){mod=(!test&&((bits>>x)&1)===1);this.modules[x%3+this.moduleCount-8-3][Math.floor(x/3)]=mod;}},setupTypeInfo:function(test,mp){var data=(this.errorCorrectLevel<<3)|mp,bits=QRUtil.getBCHTypeInfo(data),mod;for(var v=0;v<15;v++){mod=(!test&&((bits>>v)&1)===1);if(v<6)this.modules[v][8]=mod;else if(v<8)this.modules[v+1][8]=mod;else this.modules[this.moduleCount-15+v][8]=mod;}for(var h=0;h<15;h++){mod=(!test&&((bits>>h)&1)===1);if(h<8)this.modules[8][this.moduleCount-h-1]=mod;else if(h<9)this.modules[8][15-h-1+1]=mod;else this.modules[8][15-h-1]=mod;}this.modules[this.moduleCount-8][8]=(!test);},mapData:function(data,mp){var inc=-1,row=this.moduleCount-1,bi=7,byi=0;for(var col=this.moduleCount-1;col>0;col-=2){if(col===6)col--;while(true){for(var c=0;c<2;c++){if(this.modules[row][col-c]===null){var dark=false;if(byi<data.length)dark=((data[byi]>>>bi)&1)===1;if(QRUtil.getMask(mp,row,col-c))dark=!dark;this.modules[row][col-c]=dark;bi--;if(bi===-1){byi++;bi=7;}}}row+=inc;if(row<0||this.moduleCount<=row){row-=inc;inc=-inc;break;}}}}};
+QRCode.createData=function(typeNumber,ecl,dataList){var rs=QRRSBlock.getRSBlocks(typeNumber,ecl),buf=new QRBitBuffer(),tot=0;for(var x=0;x<rs.length;x++)tot+=rs[x].dataCount;for(var i=0;i<dataList.length;i++){var d=dataList[i];buf.put(d.mode,4);buf.put(d.getLength(),QRUtil.getLengthInBits(d.mode,typeNumber));d.write(buf);}if(buf.getLengthInBits()>tot*8)throw new Error("overflow");if(buf.getLengthInBits()+4<=tot*8)buf.put(0,4);while(buf.getLengthInBits()%8!==0)buf.putBit(false);while(buf.getLengthInBits()<tot*8){buf.put(QRCode.PAD0,8);if(buf.getLengthInBits()<tot*8)buf.put(QRCode.PAD1,8);}return QRCode.createBytes(buf,rs);};
+QRCode.createBytes=function(buf,rs){var offset=0,mDc=0,mEc=0,dcd=[],ecd=[];for(var r=0;r<rs.length;r++){var dc=rs[r].dataCount,ec=rs[r].totalCount-dc;mDc=Math.max(mDc,dc);mEc=Math.max(mEc,ec);dcd[r]=[];for(var i=0;i<dc;i++)dcd[r][i]=0xff&buf.buffer[i+offset];offset+=dc;var rp=QRUtil.getErrorCorrectPolynomial(ec),rw=new QRPolynomial(dcd[r],rp.getLength()-1),mp2=rw.mod(rp);var ecLen=rp.getLength()-1;ecd[r]=new Array(ecLen);for(var x=0;x<ecLen;x++){var mi=x+mp2.getLength()-ecLen;ecd[r][x]=(mi>=0)?mp2.get(mi):0;}}var tcc=0;for(var y=0;y<rs.length;y++)tcc+=rs[y].totalCount;var data=new Array(tcc),idx=0;for(var z=0;z<mDc;z++)for(var s=0;s<rs.length;s++)if(z<dcd[s].length)data[idx++]=dcd[s][z];for(var xx=0;xx<mEc;xx++)for(var t=0;t<rs.length;t++)if(xx<ecd[t].length)data[idx++]=ecd[t][xx];return data;};
+function drawQR(canvas,text,ecl){var ec=QRErrorCorrectLevel[ecl]!==undefined?QRErrorCorrectLevel[ecl]:QRErrorCorrectLevel.M;var qr=new QRCode(-1,ec);qr.addData(text);qr.make();var mc=qr.getModuleCount(),sz=canvas.width,cs=Math.floor(sz/(mc+2)),mg=Math.floor((sz-cs*mc)/2),ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,sz,sz);ctx.fillStyle='#000';for(var r=0;r<mc;r++)for(var c=0;c<mc;c++)if(qr.isDark(r,c))ctx.fillRect(mg+c*cs,mg+r*cs,cs,cs);}
+
+// ============================================================
+// アプリ状態
+// ============================================================
+var App={
+  apiKey:'',model:'gemini-3-flash',systemPrompt:'',
+  stream:null,detector:null,scanTimer:null,
+  // SOAPQR (カルテ情報)
+  soapSessionId:null,soapTotal:0,soapChunks:{},soapDone:false,
+  // VOICEQR (患者会話録)
+  voiceSessionId:null,voiceTotal:0,voiceChunks:{},voiceDone:false,
+  // output
+  soapText:'',outChunks:[],outChunkTexts:[],outIdx:0,outPlaying:false,outTimer:null
+};
+
+function toggleApiKeyVisibility(){var inp=document.getElementById('apiKey');inp.type=inp.type==='password'?'text':'password';}
+
+function goToPanel(n){
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('panel'+n).classList.add('active');
+  document.querySelectorAll('.step-tab').forEach(function(t,i){t.classList.remove('active','done');if(i+1===n)t.classList.add('active');else if(i+1<n)t.classList.add('done');});
+}
+
+async function proceedToScan(){
+  App.apiKey=document.getElementById('apiKey').value.trim();
+  App.model=document.getElementById('modelSelect').value;
+  App.systemPrompt=document.getElementById('systemPrompt').value;
+  if(!App.apiKey){alert('Gemini APIキーを入力してください。');return;}
+  goToPanel(2); resetScanState(); await startCamera();
+}
+
+function resetScanState(){
+  App.soapSessionId=null;App.soapTotal=0;App.soapChunks={};App.soapDone=false;
+  App.voiceSessionId=null;App.voiceTotal=0;App.voiceChunks={};App.voiceDone=false;
+  document.getElementById('scanStatus').textContent='📷 カメラ起動中...';
+  document.getElementById('soapProgress').style.width='0%';
+  document.getElementById('voiceProgress').style.width='0%';
+  document.getElementById('soapChips').innerHTML='';
+  document.getElementById('voiceChips').innerHTML='';
+  document.getElementById('soapProgressWrap').style.display='none';
+  document.getElementById('voiceProgressWrap').style.display='none';
+  document.getElementById('scanDetail').textContent='';
+  document.getElementById('scanSessionTag').textContent='';
+  document.getElementById('btnStartAI').disabled=true;
+}
+
+async function startCamera(){
+  if(!('BarcodeDetector' in window)){document.getElementById('noBarcodeDetector').style.display='block';document.getElementById('cameraWrap').style.display='none';return;}
+  try{
+    App.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+    var video=document.getElementById('videoEl');video.srcObject=App.stream;await video.play();
+    App.detector=new BarcodeDetector({formats:['qr_code']});
+    document.getElementById('scanStatus').textContent='📡 スキャン中... QRにカメラを向けてください';
+    startScanLoop();
+  }catch(e){document.getElementById('scanStatus').textContent='⚠ カメラ起動失敗: '+e.message;document.getElementById('noBarcodeDetector').style.display='block';console.error(e);}
+}
+
+function stopCamera(){if(App.scanTimer){clearInterval(App.scanTimer);App.scanTimer=null;}if(App.stream){App.stream.getTracks().forEach(function(t){t.stop();});App.stream=null;}}
+
+var lastScanned={};
+function startScanLoop(){
+  App.scanTimer=setInterval(async function(){
+    var video=document.getElementById('videoEl');
+    if(!App.detector||video.readyState<2)return;
+    try{var codes=await App.detector.detect(video);codes.forEach(function(code){processQRPayload(code.rawValue);});}catch(e){}
+  },150);
+}
+
+function processQRPayload(raw){
+  var isSoap=raw.startsWith('SOAPQR|'),isVoice=raw.startsWith('VOICEQR|');
+  if(!isSoap&&!isVoice)return;
+  var now=Date.now();
+  if(lastScanned[raw]&&now-lastScanned[raw]<2000)return;
+  lastScanned[raw]=now;
+  var parts=raw.split('|');if(parts.length<4)return;
+  var sessionId=parts[1],indexPart=parts[2],text=parts.slice(3).join('|');
+  var m=indexPart.match(/^(\d+)\/(\d+)$/);if(!m)return;
+  var idx=parseInt(m[1]),total=parseInt(m[2]);
+  if(isSoap){
+    if(App.soapSessionId===null){
+      App.soapSessionId=sessionId;App.soapTotal=total;
+      document.getElementById('soapProgressWrap').style.display='block';
+      document.getElementById('scanSessionTag').textContent='| SOAP: '+sessionId;
+      var chips='';for(var i=1;i<=total;i++)chips+='<span class="chunk-chip" id="sc'+i+'">'+i+'</span>';
+      document.getElementById('soapChips').innerHTML=chips;
+    }else if(App.soapSessionId!==sessionId)return;
+    if(!App.soapChunks[idx]){
+      App.soapChunks[idx]=text;
+      var chip=document.getElementById('sc'+idx);if(chip)chip.classList.add('received');
+    }
+  }else{
+    if(App.voiceSessionId===null){
+      App.voiceSessionId=sessionId;App.voiceTotal=total;
+      document.getElementById('voiceProgressWrap').style.display='block';
+      var vtag=document.getElementById('scanSessionTag').textContent;
+      document.getElementById('scanSessionTag').textContent=vtag+' | VOICE: '+sessionId;
+      var vchips='';for(var j=1;j<=total;j++)vchips+='<span class="chunk-chip" style="border-color:#8b5cf6;color:#a78bfa;" id="vc'+j+'">'+j+'</span>';
+      document.getElementById('voiceChips').innerHTML=vchips;
+    }else if(App.voiceSessionId!==sessionId)return;
+    if(!App.voiceChunks[idx]){
+      App.voiceChunks[idx]=text;
+      var vchip=document.getElementById('vc'+idx);if(vchip){vchip.classList.add('received');vchip.style.background='#7c3aed';}
+    }
+  }
+  updateScanProgress();
+}
+
+function updateScanProgress(){
+  var sRcv=Object.keys(App.soapChunks).length,sTotal=App.soapTotal;
+  var vRcv=Object.keys(App.voiceChunks).length,vTotal=App.voiceTotal;
+  if(sTotal>0)document.getElementById('soapProgress').style.width=(sRcv/sTotal*100)+'%';
+  if(vTotal>0)document.getElementById('voiceProgress').style.width=(vRcv/vTotal*100)+'%';
+  var soapDone=(sTotal>0&&sRcv>=sTotal),voiceDone=(vTotal>0&&vRcv>=vTotal);
+  App.soapDone=soapDone;App.voiceDone=voiceDone;
+  if(soapDone&&voiceDone){
+    stopCamera();document.getElementById('scanStatus').textContent='🎉 SOAP+VOICE 全受信完了！';
+    document.getElementById('btnStartAI').disabled=false;
+  }else if(soapDone&&vTotal===0){
+    stopCamera();document.getElementById('scanStatus').textContent='🎉 カルテ情報 全受信完了！';
+    document.getElementById('btnStartAI').disabled=false;
+  }else if(voiceDone&&sTotal===0){
+    stopCamera();document.getElementById('scanStatus').textContent='🎉 会話録 全受信完了！';
+    document.getElementById('btnStartAI').disabled=false;
+  }else{
+    var msg='📡 受信中... ';
+    if(sTotal>0)msg+='カルテ '+sRcv+'/'+sTotal+' ';
+    if(vTotal>0)msg+='会話 '+vRcv+'/'+vTotal;
+    document.getElementById('scanStatus').textContent=msg;
+  }
+}
+
+function processManualInput(){
+  var text=document.getElementById('manualInput').value.trim();if(!text){alert('テキストを入力してください。');return;}
+  var lines=text.split('\n');
+  var anyParsed=false;
+  lines.forEach(function(line){line=line.trim();if(line){processQRPayload(line);anyParsed=true;}});
+  // fallback: treat as raw SOAP text
+  if(!anyParsed||(!text.startsWith('SOAPQR|')&&!text.startsWith('VOICEQR|'))){
+    App.soapSessionId='MANUAL';App.soapTotal=1;App.soapChunks[1]=text;App.soapDone=true;
+    document.getElementById('soapProgressWrap').style.display='block';
+    document.getElementById('soapChips').innerHTML='<span class="chunk-chip received">1</span>';
+    document.getElementById('soapProgress').style.width='100%';
+    document.getElementById('scanStatus').textContent='✅ 手動入力: 1チャンク';
+    document.getElementById('btnStartAI').disabled=false;
+  }
+}
+
+// ============================================================
+// STEP 3: Gemini API SOAP変換
+// ============================================================
+async function startSOAPConversion(){
+  var soapKeys=Object.keys(App.soapChunks).map(Number).sort(function(a,b){return a-b;});
+  var soapText=soapKeys.map(function(k){return App.soapChunks[k];}).join('');
+  var voiceKeys=Object.keys(App.voiceChunks).map(Number).sort(function(a,b){return a-b;});
+  var voiceText=voiceKeys.map(function(k){return App.voiceChunks[k];}).join('');
+  var displayText='';
+  if(soapText)displayText+='【カルテ情報】\n'+soapText;
+  if(voiceText)displayText+=(displayText?'\n\n':'')+'【患者会話録（音声文字起こし）】\n'+voiceText;
+  document.getElementById('receivedText').textContent=displayText||'(入力なし)';
+  document.getElementById('aiModelBadge').textContent='('+App.model+')';
+  goToPanel(3);
+  document.getElementById('aiLoading').style.display='block';
+  document.getElementById('soapOutput').value='';
+  try{
+    var result=await callGemini(soapText,voiceText);
+    document.getElementById('soapOutput').value=result;App.soapText=result;
+  }catch(e){
+    document.getElementById('soapOutput').value='❌ APIエラー: '+e.message+'\n\nAPIキーと接続を確認してください。';App.soapText='';
+  }finally{document.getElementById('aiLoading').style.display='none';}
+}
+
+async function callGemini(emrText,voiceText){
+  var url='https://generativelanguage.googleapis.com/v1beta/models/'+App.model+':generateContent?key='+App.apiKey;
+  var userMsg='以下の情報をもとにSOAP記録を作成してください。\n';
+  userMsg+='【重要】個人情報マーカー（【氏名削除】等）は出力に含めないこと。省略・要約は禁止。\n\n';
+  if(emrText){
+    userMsg+='【カルテ情報（Oセクションに転記）】\n'+emrText+'\n\n';
+  }
+  if(voiceText){
+    userMsg+='【患者会話録（Sセクションに記載）】\n'+voiceText+'\n\n';
+  }
+  if(!emrText&&!voiceText){userMsg+='（入力なし）';}
+  var body={
+    system_instruction:{parts:[{text:App.systemPrompt}]},
+    contents:[{role:'user',parts:[{text:userMsg}]}],
+    generationConfig:{temperature:0.2,maxOutputTokens:8192}
+  };
+  var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!response.ok){var errData=await response.json().catch(function(){return{};});throw new Error('HTTP '+response.status+': '+(errData.error&&errData.error.message||response.statusText));}
+  var data=await response.json();
+  if(data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts)
+    return data.candidates[0].content.parts.map(function(p){return p.text;}).join('');
+  throw new Error('想定外のレスポンス形式');
+}
+
+function copySOAP(){
+  var text=document.getElementById('soapOutput').value;
+  navigator.clipboard.writeText(text).then(function(){alert('クリップボードにコピーしました。');}).catch(function(){document.getElementById('soapOutput').select();document.execCommand('copy');alert('コピーしました。');});
+}
+
+// ============================================================
+// STEP 4: 出力QR
+// ============================================================
+function generateOutputQR(){
+  App.soapText=document.getElementById('soapOutput').value.trim();if(!App.soapText){alert('変換結果がありません。');return;}
+  var charsPerQR=120,sessionId='OUT'+Date.now().toString(36).slice(-3).toUpperCase();
+  var chunks=[],i=0;
+  while(i<App.soapText.length){chunks.push(App.soapText.slice(i,i+charsPerQR));i+=charsPerQR;}
+  var total=chunks.length;
+  App.outChunkTexts=chunks;
+  App.outChunks=chunks.map(function(c,idx){return 'SOAPQR|'+sessionId+'|'+(idx+1)+'/'+total+'|'+c;});
+  App.outIdx=0;App.outPlaying=false;
+  goToPanel(4);outDisplayQR(0);
+}
+
+function outDisplayQR(idx){
+  if(idx<0)idx=0;if(idx>=App.outChunks.length)idx=App.outChunks.length-1;App.outIdx=idx;
+  var canvas=document.getElementById('outCanvas');
+  try{drawQR(canvas,App.outChunks[idx],'M');}catch(e){console.error('QR error:',e);}
+  var total=App.outChunks.length,cur=idx+1;
+  document.getElementById('outProgress').textContent=cur+' / '+total;
+  document.getElementById('outProgressFill').style.width=(cur/total*100)+'%';
+  document.getElementById('outChunkInfo').textContent=App.outChunkTexts[idx].slice(0,60)+(App.outChunkTexts[idx].length>60?'...':'');
+}
+function outPrev(){stopOutPlay();outDisplayQR(App.outIdx-1);}
+function outNext(){stopOutPlay();if(App.outIdx<App.outChunks.length-1)outDisplayQR(App.outIdx+1);else if(document.getElementById('outLoop').checked)outDisplayQR(0);}
+function outRestart(){stopOutPlay();outDisplayQR(0);document.getElementById('outPlayBtn').textContent='▶ 開始';document.getElementById('outPlayBtn').className='btn btn-primary';document.getElementById('outTimer').textContent='待機中';}
+function outTogglePlay(){App.outPlaying?stopOutPlay():startOutPlay();}
+function startOutPlay(){App.outPlaying=true;document.getElementById('outPlayBtn').textContent='⏸ 一時停止';document.getElementById('outPlayBtn').className='btn btn-warn';scheduleOutNext();}
+function stopOutPlay(){App.outPlaying=false;document.getElementById('outPlayBtn').textContent='▶ 再開';document.getElementById('outPlayBtn').className='btn btn-primary';if(App.outTimer){clearTimeout(App.outTimer);App.outTimer=null;}document.getElementById('outTimer').textContent='一時停止中';}
+function scheduleOutNext(){
+  if(!App.outPlaying)return;
+  var ms=Math.round((parseFloat(document.getElementById('outInterval').value)||0.5)*1000);
+  document.getElementById('outTimer').textContent='▶ 再生中';
+  App.outTimer=setTimeout(function(){
+    var next=App.outIdx+1;
+    if(next>=App.outChunks.length){
+      if(document.getElementById('outLoop').checked){outDisplayQR(0);scheduleOutNext();}
+      else{App.outPlaying=false;document.getElementById('outPlayBtn').textContent='✓ 完了';document.getElementById('outPlayBtn').className='btn btn-success';document.getElementById('outTimer').textContent='送信完了！';}
+    }else{outDisplayQR(next);scheduleOutNext();}
+  },ms);
+}
+function resetAll(){stopCamera();stopOutPlay();lastScanned={};resetScanState();goToPanel(2);startCamera();}
+document.addEventListener('keydown',function(e){
+  if(document.getElementById('panel4').classList.contains('active')){
+    if(e.code==='Space'){e.preventDefault();outTogglePlay();}
+    if(e.code==='ArrowLeft'){stopOutPlay();outDisplayQR(App.outIdx-1);}
+    if(e.code==='ArrowRight'){stopOutPlay();if(App.outIdx<App.outChunks.length-1)outDisplayQR(App.outIdx+1);}
+  }
+});
+</script>
+</body>
+</html>

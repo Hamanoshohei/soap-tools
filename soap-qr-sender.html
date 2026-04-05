@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>服薬指導 QR送信ツール v1.0</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --accent: #2196f3;
+    --accent2: #00bcd4;
+    --danger: #f44336;
+    --warn: #ff9800;
+    --ok: #4caf50;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'Meiryo UI', Meiryo, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #1565c0, #0288d1);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
+  header .badge {
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+  /* Stepper */
+  .stepper {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .step-tab {
+    flex: 1;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text2);
+    border-right: 1px solid var(--border);
+    cursor: default;
+    transition: all 0.2s;
+  }
+  .step-tab:last-child { border-right: none; }
+  .step-tab.active { background: var(--accent); color: #fff; font-weight: 600; }
+  .step-tab.done { background: var(--surface2); color: var(--ok); }
+  .step-num { font-size: 18px; font-weight: 700; display: block; }
+  .step-label { font-size: 10px; margin-top: 2px; }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Inputs */
+  textarea, input[type=number], input[type=text], select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  textarea:focus, input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  textarea { resize: vertical; min-height: 180px; line-height: 1.6; }
+  input[type=number] { width: auto; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: var(--radius);
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-success { background: var(--ok); color: #fff; }
+  .btn-warn { background: var(--warn); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Character count */
+  .char-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .char-warn { color: var(--warn); }
+
+  /* Filter log */
+  .filter-log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.7;
+    max-height: 120px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+  .filter-log .deleted { color: var(--danger); }
+  .filter-log .kept { color: var(--ok); }
+  .filter-log .info { color: var(--text2); }
+
+  /* Text preview */
+  .text-preview {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.7;
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin-bottom: 12px;
+  }
+  .highlight-del { background: rgba(244,67,54,0.2); border-radius: 2px; padding: 0 2px; }
+
+  /* Settings row */
+  .settings-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .setting-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .setting-item label { color: var(--text2); white-space: nowrap; }
+  .setting-item input[type=number] { width: 80px; }
+  .setting-item select { width: auto; }
+
+  /* QR Display */
+  .qr-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 16px;
+  }
+  #qrCanvas {
+    border: 4px solid #fff;
+    border-radius: 4px;
+    background: #fff;
+    image-rendering: pixelated;
+  }
+  .qr-progress-text {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 2px;
+  }
+  .progress-bar-outer {
+    width: 100%;
+    max-width: 400px;
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-bar-inner {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.15s;
+  }
+  .qr-chunk-info {
+    font-size: 11px;
+    color: var(--text2);
+    text-align: center;
+    max-width: 400px;
+    word-break: break-all;
+  }
+  .qr-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .timer-display {
+    font-size: 12px;
+    color: var(--accent2);
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-weight: 600;
+  }
+  .action-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .tag {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .session-id {
+    font-family: monospace;
+    color: var(--accent2);
+    font-size: 12px;
+  }
+  hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  /* Mode tabs */
+  .mode-tabs { display: flex; gap: 0; margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .mode-tab { flex: 1; padding: 10px 12px; text-align: center; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text2); background: var(--surface); border: none; font-family: inherit; transition: all 0.2s; }
+  .mode-tab.active { background: var(--accent); color: #fff; }
+  .mode-tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+
+  /* Barcode receiver */
+  .br-status { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--surface2); border-radius: var(--radius); margin-bottom: 12px; }
+  .br-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--text2); flex-shrink: 0; }
+  .br-dot.active { background: var(--ok); box-shadow: 0 0 8px var(--ok); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .br-status-text { font-size: 13px; font-weight: 600; }
+  .received-text-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; min-height: 120px; max-height: 400px; overflow-y: auto; }
+  .chunk-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chunk-chip { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); color: var(--text2); }
+  .chunk-chip.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+
+  /* ===== iOS Safari / スマホ最適化 ===== */
+  @media (max-width: 640px) {
+    body { font-size: 15px; }
+    header { padding: 10px 12px; }
+    header h1 { font-size: 13px; }
+    header .badge { font-size: 10px; padding: 2px 6px; }
+    .container { padding: 10px; }
+
+    /* iOSズームイン防止: フォントサイズ16px強制 */
+    textarea, input[type=number], input[type=text], select {
+      font-size: 16px !important;
+    }
+
+    /* タッチターゲット最小44px */
+    .btn {
+      min-height: 44px;
+      padding: 11px 14px;
+      font-size: 14px;
+    }
+
+    /* ステッパー */
+    .stepper { margin-bottom: 16px; }
+    .step-tab { padding: 8px 2px; font-size: 9px; }
+    .step-num { font-size: 14px; }
+    .step-label { font-size: 8px; margin-top: 1px; }
+
+    /* カード */
+    .card { padding: 12px; margin-bottom: 12px; }
+
+    /* テキストエリア */
+    textarea { min-height: 120px; }
+
+    /* 設定行 */
+    .settings-row { flex-direction: column; gap: 10px; }
+    .setting-item { width: 100%; }
+    .setting-item input[type=number] { width: 90px; }
+
+    /* アクション行 */
+    .action-row { gap: 8px; }
+    .action-row .btn { flex: 1 1 auto; justify-content: center; }
+
+    /* モードタブ */
+    .mode-tab { padding: 10px 6px; font-size: 12px; }
+
+    /* QR表示 */
+    .qr-wrapper { padding: 16px 10px; gap: 12px; }
+    #qrCanvas { max-width: calc(100vw - 40px); height: auto; }
+    .qr-progress-text { font-size: 22px; }
+    .qr-controls { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm14 3h-3v-3h3zm0 4h-3v-3h3zm3 0h-3v-3h3zm0-4h-3v-3h3z"/></svg>
+  <h1>服薬指導記録 QR送信ツール</h1>
+  <span class="badge">OFFLINE対応</span>
+  <span class="badge">v1.0</span>
+</header>
+
+<div class="container">
+
+  <!-- Mode tabs -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="modeTabSend" onclick="switchMode('send')">📤 QR送信モード（カルテ→AI）</button>
+    <button class="mode-tab" id="modeTabRecv" onclick="switchMode('recv')">📥 バーコードリーダー受信モード（AI→カルテ）</button>
+  </div>
+
+  <!-- ========== SEND MODE ========== -->
+  <div id="sendModeWrap">
+
+  <!-- Stepper -->
+  <div class="stepper">
+    <div class="step-tab active" id="tab1">
+      <span class="step-num">①</span>
+      <span class="step-label">テキスト入力</span>
+    </div>
+    <div class="step-tab" id="tab2">
+      <span class="step-num">②</span>
+      <span class="step-label">フィルター確認</span>
+    </div>
+    <div class="step-tab" id="tab3">
+      <span class="step-num">③</span>
+      <span class="step-label">QR送信</span>
+    </div>
+  </div>
+
+  <!-- PANEL 1: テキスト入力 -->
+  <div class="panel active" id="panel1">
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zm2 16H8v-2h8zm0-4H8v-2h8zm-3-5V3.5L18.5 9z"/></svg>
+        カルテテキスト貼り付け
+      </div>
+      <textarea id="rawText" placeholder="電子カルテからコピーしたテキストをここにペーストしてください。&#10;&#10;例：患者氏名：山田 太郎&#10;生年月日：1960年5月15日&#10;年齢：64歳&#10;診断名：2型糖尿病、高血圧..."></textarea>
+      <div class="char-info">
+        <span id="rawCount">0 文字 / 0 bytes (UTF-8)</span>
+        <span id="charWarn" class="char-warn" style="display:none">⚠ 大量のテキスト: QR枚数が増えます</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        フィルター設定
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="filterName" checked> 氏名・フリガナ
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="filterDOB" checked> 生年月日
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="filterAddr" checked> 住所
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="filterPhone" checked> 電話番号
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="filterInsurance" checked> 保険証番号
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="filterId" checked> 患者ID
+        </label>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-primary" onclick="applyFilter()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          個人情報フィルター適用 →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL 2: フィルター確認 -->
+  <div class="panel" id="panel2">
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        フィルター処理ログ
+      </div>
+      <div class="filter-log" id="filterLog">（ここにログが表示されます）</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        フィルター後テキスト（AI送信内容プレビュー）
+      </div>
+      <div class="text-preview" id="filteredPreview">-</div>
+      <div class="char-info">
+        <span id="filteredCount">-</span>
+        <span id="qrCountEstimate" style="color:var(--accent2)">-</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 10l-9 7z"/></svg>
+        QR設定
+      </div>
+      <div class="settings-row">
+        <div class="setting-item">
+          <label>QRあたり文字数:</label>
+          <input type="number" id="charsPerQR" value="120" min="50" max="250" onchange="updateEstimate()">
+        </div>
+        <div class="setting-item">
+          <label>切替間隔(秒):</label>
+          <input type="number" id="interval" value="0.4" step="0.1" min="0.1" max="5.0">
+        </div>
+        <div class="setting-item">
+          <label>誤り訂正:</label>
+          <select id="eccLevel">
+            <option value="L">L（低・高容量）</option>
+            <option value="M" selected>M（中・推奨）</option>
+            <option value="Q">Q（高）</option>
+          </select>
+        </div>
+      </div>
+      <p style="margin-top:10px;font-size:11px;color:var(--text2);">
+        ※ 日本語は1文字=3バイト。文字数を減らすとQR精細度が下がりスキャンしやすくなります。
+      </p>
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-ghost" onclick="goToPanel(1)">← 戻る</button>
+      <button class="btn btn-success" onclick="generateQRCodes()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 3v-3h3v3h-3zm0 4v-3h3v3h-3zm3 0v-3h3v3h-3zm0-4v-3h3v3h-3z"/></svg>
+        QRコードを生成 →
+      </button>
+    </div>
+  </div>
+
+  <!-- PANEL 3: QR送信 -->
+  <div class="panel" id="panel3">
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm11 3v-3h3v3h-3zm0 4v-3h3v3h-3zm3 0v-3h3v3h-3zm0-4v-3h3v3h-3z"/></svg>
+        QRコード連続表示
+        <span class="session-id" id="sessionIdDisplay"></span>
+      </div>
+      <div class="qr-wrapper">
+        <canvas id="qrCanvas" width="300" height="300"></canvas>
+        <div class="qr-progress-text">
+          <span id="currentQRNum">-</span> / <span id="totalQRNum">-</span>
+        </div>
+        <div class="progress-bar-outer">
+          <div class="progress-bar-inner" id="progressFill" style="width:0%"></div>
+        </div>
+        <div class="qr-chunk-info" id="chunkPreview">-</div>
+        <div class="qr-controls">
+          <button class="btn btn-ghost" onclick="prevQR()" id="btnPrev">⏮ 前へ</button>
+          <button class="btn btn-primary" onclick="togglePlay()" id="btnPlay">▶ 開始</button>
+          <button class="btn btn-ghost" onclick="nextQR()" id="btnNext">次へ ⏭</button>
+          <span class="timer-display" id="timerDisplay">待機中</span>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" id="loopPlay"> ループ再生
+          </label>
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="restartAll()">↩ 最初から</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="font-size:12px;">チャンク一覧</div>
+      <div id="chunkList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-ghost" onclick="goToPanel(2)">← 設定に戻る</button>
+    </div>
+  </div>
+
+  </div><!-- /sendModeWrap -->
+
+  <!-- ========== RECEIVE MODE ========== -->
+  <div id="recvModeWrap" style="display:none;">
+
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-2 14.5l-5-5V17H5v-2h8v-2.5l5 5z"/></svg>
+        バーコードリーダー受信モード
+      </div>
+      <div class="br-status">
+        <div class="br-dot active" id="brDot"></div>
+        <div class="br-status-text" id="brStatusText">🎯 待機中 — バーコードリーダーでQRコードをスキャンしてください</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;padding:10px;background:var(--surface2);border-radius:var(--radius);">
+        ⌨ USB バーコードリーダーをPCに接続し、受信アプリの出力QRコードを読み取ってください。<br>
+        このページにフォーカスがある状態でスキャンすると自動受信されます。
+      </div>
+
+      <div id="brProgressWrap" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;font-weight:600;color:var(--accent2);" id="brProgressLabel">0 / 0 チャンク受信</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="resetBarcodeReceiver()">↩ リセット</button>
+        </div>
+        <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+          <div style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width 0.3s;" id="brProgressBar"></div>
+        </div>
+        <div class="chunk-chips" id="brChips"></div>
+      </div>
+    </div>
+
+    <div class="card" id="brResultCard" style="display:none;">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        受信済みSOAPテキスト
+        <span style="font-size:11px;font-weight:400;color:var(--text2);" id="brSessionLabel"></span>
+      </div>
+      <div class="received-text-box" id="brReceivedText">-</div>
+      <div class="action-row" style="margin-top:12px;">
+        <button class="btn btn-success" onclick="copyBarcodeResult()">📋 クリップボードにコピー</button>
+        <button class="btn btn-ghost" onclick="resetBarcodeReceiver()">🔄 新しいスキャン</button>
+      </div>
+    </div>
+
+  </div><!-- /recvModeWrap -->
+
+</div><!-- /container -->
+
+<script>
+// ============================================================
+// QRCode Library (Kazuhiko Arase, MIT License) - Browser版
+// ============================================================
+var QRMode = { MODE_NUMBER:1, MODE_ALPHA_NUM:2, MODE_8BIT_BYTE:4, MODE_KANJI:8 };
+var QRErrorCorrectLevel = { L:1, M:0, Q:3, H:2 };
+var QRMaskPattern = { PATTERN000:0,PATTERN001:1,PATTERN010:2,PATTERN011:3,PATTERN100:4,PATTERN101:5,PATTERN110:6,PATTERN111:7 };
+
+var QRMath = (function(){
+  var EXP_TABLE = new Array(256);
+  var LOG_TABLE = new Array(256);
+  for(var i=0;i<8;i++) EXP_TABLE[i]=1<<i;
+  for(var i=8;i<256;i++) EXP_TABLE[i]=EXP_TABLE[i-4]^EXP_TABLE[i-5]^EXP_TABLE[i-6]^EXP_TABLE[i-8];
+  for(var i=0;i<255;i++) LOG_TABLE[EXP_TABLE[i]]=i;
+  return {
+    glog:function(n){if(n<1)throw new Error("glog("+n+")");return LOG_TABLE[n];},
+    gexp:function(n){while(n<0)n+=255;while(n>=256)n-=255;return EXP_TABLE[n];}
+  };
+})();
+
+function QRPolynomial(num,shift){
+  var offset=0;
+  while(offset<num.length&&num[offset]===0)offset++;
+  this.num=new Array(num.length-offset+shift);
+  for(var i=0;i<num.length-offset;i++)this.num[i]=num[i+offset];
+}
+QRPolynomial.prototype={
+  get:function(i){return this.num[i];},
+  getLength:function(){return this.num.length;},
+  multiply:function(e){
+    var num=new Array(this.getLength()+e.getLength()-1);
+    for(var i=0;i<this.getLength();i++)
+      for(var j=0;j<e.getLength();j++)
+        num[i+j]^=QRMath.gexp(QRMath.glog(this.get(i))+QRMath.glog(e.get(j)));
+    return new QRPolynomial(num,0);
+  },
+  mod:function(e){
+    if(this.getLength()-e.getLength()<0)return this;
+    var ratio=QRMath.glog(this.get(0))-QRMath.glog(e.get(0));
+    var num=new Array(this.getLength());
+    for(var i=0;i<this.getLength();i++)num[i]=this.get(i);
+    for(var x=0;x<e.getLength();x++)num[x]^=QRMath.gexp(QRMath.glog(e.get(x))+ratio);
+    return new QRPolynomial(num,0).mod(e);
+  }
+};
+
+function QRBitBuffer(){this.buffer=[];this.length=0;}
+QRBitBuffer.prototype={
+  get:function(i){return((this.buffer[Math.floor(i/8)]>>>(7-i%8))&1)===1;},
+  put:function(num,length){for(var i=0;i<length;i++)this.putBit(((num>>>(length-i-1))&1)===1);},
+  getLengthInBits:function(){return this.length;},
+  putBit:function(bit){
+    var bi=Math.floor(this.length/8);
+    if(this.buffer.length<=bi)this.buffer.push(0);
+    if(bit)this.buffer[bi]|=(0x80>>>(this.length%8));
+    this.length++;
+  }
+};
+
+// UTF-8対応 QR8bitByte
+function QR8bitByte(data){
+  this.mode=QRMode.MODE_8BIT_BYTE;
+  this.data=data;
+  // UTF-8バイト列に変換
+  var enc=new TextEncoder();
+  this.bytes=enc.encode(data);
+}
+QR8bitByte.prototype={
+  getLength:function(){return this.bytes.length;},
+  write:function(buffer){for(var i=0;i<this.bytes.length;i++)buffer.put(this.bytes[i],8);}
+};
+
+var QRRSBlock=(function(){
+  var T=[
+    [1,26,19],[1,26,16],[1,26,13],[1,26,9],
+    [1,44,34],[1,44,28],[1,44,22],[1,44,16],
+    [1,70,55],[1,70,44],[2,35,17],[2,35,13],
+    [1,100,80],[2,50,32],[2,50,24],[4,25,9],
+    [1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],
+    [2,86,68],[4,43,27],[4,43,19],[4,43,15],
+    [2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],
+    [2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],
+    [2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],
+    [2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],
+    [4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],
+    [2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],
+    [4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],
+    [3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],
+    [5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12],
+    [5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],
+    [1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],
+    [5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],
+    [3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],
+    [3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16]
+  ];
+  function getRSBlocks(ver,ecl){
+    var rb=T[(ver-1)*4+(ecl===QRErrorCorrectLevel.L?0:ecl===QRErrorCorrectLevel.M?1:ecl===QRErrorCorrectLevel.Q?2:3)];
+    if(!rb)throw new Error("bad rs block");
+    var len=rb.length/3, list=[];
+    for(var i=0;i<len;i++){
+      for(var j=0;j<rb[i*3];j++) list.push({totalCount:rb[i*3+1],dataCount:rb[i*3+2]});
+    }
+    return list;
+  }
+  return {getRSBlocks:getRSBlocks};
+})();
+
+var QRUtil=(function(){
+  var PP=[
+    [],[6,18],[6,22],[6,26],[6,30],[6,34],
+    [6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],
+    [6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],
+    [6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],
+    [6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],
+    [6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],
+    [6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],
+    [6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],
+    [6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],
+    [6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],
+    [6,30,58,86,114,142,170]
+  ];
+  var G15=(1<<10)|(1<<8)|(1<<5)|(1<<4)|(1<<2)|(1<<1)|(1<<0);
+  var G18=(1<<12)|(1<<11)|(1<<10)|(1<<9)|(1<<8)|(1<<5)|(1<<2)|(1<<0);
+  var G15M=(1<<14)|(1<<12)|(1<<10)|(1<<4)|(1<<1);
+  function getBCHDigit(d){var n=0;while(d!==0){n++;d>>>=1;}return n;}
+  return {
+    getBCHTypeInfo:function(d){var x=d<<10;while(getBCHDigit(x)-getBCHDigit(G15)>=0)x^=(G15<<(getBCHDigit(x)-getBCHDigit(G15)));return((d<<10)|x)^G15M;},
+    getBCHTypeNumber:function(d){var x=d<<12;while(getBCHDigit(x)-getBCHDigit(G18)>=0)x^=(G18<<(getBCHDigit(x)-getBCHDigit(G18)));return(d<<12)|x;},
+    getPatternPosition:function(v){return PP[v-1];},
+    getMask:function(p,i,j){
+      switch(p){
+        case 0:return(i+j)%2===0;case 1:return i%2===0;case 2:return j%3===0;case 3:return(i+j)%3===0;
+        case 4:return(Math.floor(i/2)+Math.floor(j/3))%2===0;case 5:return(i*j)%2+(i*j)%3===0;
+        case 6:return((i*j)%2+(i*j)%3)%2===0;case 7:return((i*j)%3+(i+j)%2)%2===0;
+        default:throw new Error("bad maskPattern:"+p);
+      }
+    },
+    getErrorCorrectPolynomial:function(n){
+      var a=new QRPolynomial([1],0);
+      for(var i=0;i<n;i++)a=a.multiply(new QRPolynomial([1,QRMath.gexp(i)],0));
+      return a;
+    },
+    getLengthInBits:function(mode,type){
+      if(type<10){
+        if(mode===QRMode.MODE_NUMBER)return 10;if(mode===QRMode.MODE_ALPHA_NUM)return 9;
+        if(mode===QRMode.MODE_8BIT_BYTE)return 8;if(mode===QRMode.MODE_KANJI)return 8;
+      }else if(type<27){
+        if(mode===QRMode.MODE_NUMBER)return 12;if(mode===QRMode.MODE_ALPHA_NUM)return 11;
+        if(mode===QRMode.MODE_8BIT_BYTE)return 16;if(mode===QRMode.MODE_KANJI)return 10;
+      }else{
+        if(mode===QRMode.MODE_NUMBER)return 14;if(mode===QRMode.MODE_ALPHA_NUM)return 13;
+        if(mode===QRMode.MODE_8BIT_BYTE)return 16;if(mode===QRMode.MODE_KANJI)return 12;
+      }
+      throw new Error("mode:"+mode);
+    },
+    getLostPoint:function(qr){
+      var n=qr.getModuleCount(),lp=0,r,c;
+      for(r=0;r<n;r++)for(c=0;c<n;c++){var sc=0,dk=qr.isDark(r,c);for(var dr=-1;dr<=1;dr++){if(r+dr<0||n<=r+dr)continue;for(var dc=-1;dc<=1;dc++){if(c+dc<0||n<=c+dc)continue;if(dr===0&&dc===0)continue;if(dk===qr.isDark(r+dr,c+dc))sc++;}}if(sc>5)lp+=(3+sc-5);}
+      for(r=0;r<n-1;r++)for(c=0;c<n-1;c++){var cnt=0;if(qr.isDark(r,c))cnt++;if(qr.isDark(r+1,c))cnt++;if(qr.isDark(r,c+1))cnt++;if(qr.isDark(r+1,c+1))cnt++;if(cnt===0||cnt===4)lp+=3;}
+      for(r=0;r<n;r++)for(c=0;c<n-6;c++)if(qr.isDark(r,c)&&!qr.isDark(r,c+1)&&qr.isDark(r,c+2)&&qr.isDark(r,c+3)&&qr.isDark(r,c+4)&&!qr.isDark(r,c+5)&&qr.isDark(r,c+6))lp+=40;
+      for(c=0;c<n;c++)for(r=0;r<n-6;r++)if(qr.isDark(r,c)&&!qr.isDark(r+1,c)&&qr.isDark(r+2,c)&&qr.isDark(r+3,c)&&qr.isDark(r+4,c)&&!qr.isDark(r+5,c)&&qr.isDark(r+6,c))lp+=40;
+      var dk=0;for(c=0;c<n;c++)for(r=0;r<n;r++)if(qr.isDark(r,c))dk++;
+      lp+=Math.abs(100*dk/n/n-50)/5*10;
+      return lp;
+    }
+  };
+})();
+
+function QRCode(typeNumber,errorCorrectLevel){
+  this.typeNumber=typeNumber;this.errorCorrectLevel=errorCorrectLevel;
+  this.modules=null;this.moduleCount=0;this.dataCache=null;this.dataList=[];
+}
+QRCode.PAD0=0xEC;QRCode.PAD1=0x11;
+QRCode.prototype={
+  addData:function(data){this.dataList.push(new QR8bitByte(data));this.dataCache=null;},
+  isDark:function(r,c){if(r<0||this.moduleCount<=r||c<0||this.moduleCount<=c)throw new Error(r+","+c);return this.modules[r][c];},
+  getModuleCount:function(){return this.moduleCount;},
+  make:function(){
+    if(this.typeNumber<1){
+      for(var t=1;t<40;t++){
+        var rs=QRRSBlock.getRSBlocks(t,this.errorCorrectLevel),buf=new QRBitBuffer(),tot=0;
+        for(var i=0;i<rs.length;i++)tot+=rs[i].dataCount;
+        for(var x=0;x<this.dataList.length;x++){var d=this.dataList[x];buf.put(d.mode,4);buf.put(d.getLength(),QRUtil.getLengthInBits(d.mode,t));d.write(buf);}
+        if(buf.getLengthInBits()<=tot*8){this.typeNumber=t;break;}
+      }
+    }
+    this.makeImpl(false,this.getBestMaskPattern());
+  },
+  makeImpl:function(test,maskPattern){
+    this.moduleCount=this.typeNumber*4+17;
+    this.modules=[];
+    for(var r=0;r<this.moduleCount;r++){this.modules[r]=[];for(var c=0;c<this.moduleCount;c++)this.modules[r][c]=null;}
+    this.setupPositionProbePattern(0,0);this.setupPositionProbePattern(this.moduleCount-7,0);this.setupPositionProbePattern(0,this.moduleCount-7);
+    this.setupPositionAdjustPattern();this.setupTimingPattern();this.setupTypeInfo(test,maskPattern);
+    if(this.typeNumber>=7)this.setupTypeNumber(test);
+    if(this.dataCache===null)this.dataCache=QRCode.createData(this.typeNumber,this.errorCorrectLevel,this.dataList);
+    this.mapData(this.dataCache,maskPattern);
+  },
+  setupPositionProbePattern:function(row,col){
+    for(var r=-1;r<=7;r++){if(row+r<=-1||this.moduleCount<=row+r)continue;for(var c=-1;c<=7;c++){if(col+c<=-1||this.moduleCount<=col+c)continue;this.modules[row+r][col+c]=((0<=r&&r<=6&&(c===0||c===6))||(0<=c&&c<=6&&(r===0||r===6))||(2<=r&&r<=4&&2<=c&&c<=4));}}
+  },
+  getBestMaskPattern:function(){var ml=0,p=0;for(var i=0;i<8;i++){this.makeImpl(true,i);var lp=QRUtil.getLostPoint(this);if(i===0||ml>lp){ml=lp;p=i;}}return p;},
+  setupTimingPattern:function(){for(var r=8;r<this.moduleCount-8;r++){if(this.modules[r][6]!==null)continue;this.modules[r][6]=(r%2===0);}for(var c=8;c<this.moduleCount-8;c++){if(this.modules[6][c]!==null)continue;this.modules[6][c]=(c%2===0);}},
+  setupPositionAdjustPattern:function(){var pos=QRUtil.getPatternPosition(this.typeNumber);for(var i=0;i<pos.length;i++)for(var j=0;j<pos.length;j++){var row=pos[i],col=pos[j];if(this.modules[row][col]!==null)continue;for(var r=-2;r<=2;r++)for(var c=-2;c<=2;c++)this.modules[row+r][col+c]=(Math.abs(r)===2||Math.abs(c)===2||(r===0&&c===0));}},
+  setupTypeNumber:function(test){var bits=QRUtil.getBCHTypeNumber(this.typeNumber),mod;for(var i=0;i<18;i++){mod=(!test&&((bits>>i)&1)===1);this.modules[Math.floor(i/3)][i%3+this.moduleCount-8-3]=mod;}for(var x=0;x<18;x++){mod=(!test&&((bits>>x)&1)===1);this.modules[x%3+this.moduleCount-8-3][Math.floor(x/3)]=mod;}},
+  setupTypeInfo:function(test,maskPattern){var data=(this.errorCorrectLevel<<3)|maskPattern,bits=QRUtil.getBCHTypeInfo(data),mod;for(var v=0;v<15;v++){mod=(!test&&((bits>>v)&1)===1);if(v<6)this.modules[v][8]=mod;else if(v<8)this.modules[v+1][8]=mod;else this.modules[this.moduleCount-15+v][8]=mod;}for(var h=0;h<15;h++){mod=(!test&&((bits>>h)&1)===1);if(h<8)this.modules[8][this.moduleCount-h-1]=mod;else if(h<9)this.modules[8][15-h-1+1]=mod;else this.modules[8][15-h-1]=mod;}this.modules[this.moduleCount-8][8]=(!test);},
+  mapData:function(data,maskPattern){var inc=-1,row=this.moduleCount-1,bitIndex=7,byteIndex=0;for(var col=this.moduleCount-1;col>0;col-=2){if(col===6)col--;while(true){for(var c=0;c<2;c++){if(this.modules[row][col-c]===null){var dark=false;if(byteIndex<data.length)dark=((data[byteIndex]>>>bitIndex)&1)===1;if(QRUtil.getMask(maskPattern,row,col-c))dark=!dark;this.modules[row][col-c]=dark;bitIndex--;if(bitIndex===-1){byteIndex++;bitIndex=7;}}}row+=inc;if(row<0||this.moduleCount<=row){row-=inc;inc=-inc;break;}}}},
+};
+QRCode.createData=function(typeNumber,errorCorrectLevel,dataList){
+  var rsBlocks=QRRSBlock.getRSBlocks(typeNumber,errorCorrectLevel),buffer=new QRBitBuffer(),totalDataCount=0;
+  for(var x=0;x<rsBlocks.length;x++)totalDataCount+=rsBlocks[x].dataCount;
+  for(var i=0;i<dataList.length;i++){var d=dataList[i];buffer.put(d.mode,4);buffer.put(d.getLength(),QRUtil.getLengthInBits(d.mode,typeNumber));d.write(buffer);}
+  if(buffer.getLengthInBits()>totalDataCount*8)throw new Error("code length overflow.("+buffer.getLengthInBits()+">"+totalDataCount*8+")");
+  if(buffer.getLengthInBits()+4<=totalDataCount*8)buffer.put(0,4);
+  while(buffer.getLengthInBits()%8!==0)buffer.putBit(false);
+  while(true){if(buffer.getLengthInBits()>=totalDataCount*8)break;buffer.put(QRCode.PAD0,8);if(buffer.getLengthInBits()>=totalDataCount*8)break;buffer.put(QRCode.PAD1,8);}
+  return QRCode.createBytes(buffer,rsBlocks);
+};
+QRCode.createBytes=function(buffer,rsBlocks){
+  var offset=0,maxDc=0,maxEc=0,dcdata=[],ecdata=[];
+  for(var r=0;r<rsBlocks.length;r++){
+    var dcCount=rsBlocks[r].dataCount,ecCount=rsBlocks[r].totalCount-dcCount;
+    maxDc=Math.max(maxDc,dcCount);maxEc=Math.max(maxEc,ecCount);
+    dcdata[r]=[];for(var i=0;i<dcCount;i++)dcdata[r][i]=0xff&buffer.buffer[i+offset];offset+=dcCount;
+    var rsPoly=QRUtil.getErrorCorrectPolynomial(ecCount),rawPoly=new QRPolynomial(dcdata[r],rsPoly.getLength()-1);
+    var modPoly=rawPoly.mod(rsPoly);
+    var ecLen=rsPoly.getLength()-1;ecdata[r]=new Array(ecLen);
+    for(var x=0;x<ecLen;x++){var modIndex=x+modPoly.getLength()-ecLen;ecdata[r][x]=(modIndex>=0)?modPoly.get(modIndex):0;}
+  }
+  var totalCC=0;for(var y=0;y<rsBlocks.length;y++)totalCC+=rsBlocks[y].totalCount;
+  var data=new Array(totalCC),index=0;
+  for(var z=0;z<maxDc;z++)for(var s=0;s<rsBlocks.length;s++)if(z<dcdata[s].length)data[index++]=dcdata[s][z];
+  for(var xx=0;xx<maxEc;xx++)for(var t=0;t<rsBlocks.length;t++)if(xx<ecdata[t].length)data[index++]=ecdata[t][xx];
+  return data;
+};
+
+// QRコードをCanvasに描画
+function drawQROnCanvas(canvas, text, eccLevel) {
+  var ecl = QRErrorCorrectLevel[eccLevel] !== undefined ? QRErrorCorrectLevel[eccLevel] : QRErrorCorrectLevel.M;
+  var qr = new QRCode(-1, ecl);
+  qr.addData(text);
+  qr.make();
+  var mc = qr.getModuleCount();
+  var size = canvas.width;
+  var cellSize = Math.floor(size / (mc + 2));
+  var margin = Math.floor((size - cellSize * mc) / 2);
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#000000';
+  for (var r = 0; r < mc; r++) {
+    for (var c = 0; c < mc; c++) {
+      if (qr.isDark(r, c)) {
+        ctx.fillRect(margin + c * cellSize, margin + r * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+  return mc;
+}
+
+// ============================================================
+// アプリケーション ロジック
+// ============================================================
+
+var AppState = {
+  rawText: '',
+  filteredText: '',
+  chunks: [],       // QRチャンク配列 (ペイロード文字列)
+  chunkTexts: [],   // 元テキストチャンク（表示用）
+  currentIndex: 0,
+  isPlaying: false,
+  timer: null,
+  sessionId: '',
+};
+
+// ---- ユーティリティ ----
+function getUTF8Bytes(str) {
+  return new TextEncoder().encode(str).length;
+}
+
+function generateSessionId() {
+  var t = Date.now().toString(36).toUpperCase().slice(-4);
+  var r = Math.random().toString(36).toUpperCase().slice(2,4);
+  return t + r;
+}
+
+function goToPanel(n) {
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('panel'+n).classList.add('active');
+  document.querySelectorAll('.step-tab').forEach(function(t,i){
+    t.classList.remove('active','done');
+    if(i+1===n) t.classList.add('active');
+    else if(i+1<n) t.classList.add('done');
+  });
+}
+
+// ---- STEP 1: テキスト入力 ----
+document.getElementById('rawText').addEventListener('input', function(){
+  var text = this.value;
+  AppState.rawText = text;
+  var chars = text.length;
+  var bytes = getUTF8Bytes(text);
+  document.getElementById('rawCount').textContent = chars + ' 文字 / ' + bytes + ' bytes (UTF-8)';
+  document.getElementById('charWarn').style.display = chars > 3000 ? 'inline' : 'none';
+});
+
+// ---- STEP 1 → 2: フィルター適用 ----
+function applyFilter() {
+  var text = AppState.rawText;
+  if (!text.trim()) { alert('テキストを入力してください。'); return; }
+
+  var log = [];
+  var filtered = text;
+
+  if (document.getElementById('filterName').checked) {
+    filtered = filtered.replace(/(患者氏名|患者名|氏名|お名前|フルネーム|姓名)[　 ]*[：:][　 ]*([^\n\r]{1,20})/g,
+      function(m, key, val) {
+        log.push({ type: 'deleted', label: '氏名', items: [val.trim()] });
+        return key + '：【氏名削除】';
+      });
+    filtered = filtered.replace(/(フリガナ|ふりがな|カナ氏名|かな氏名|読み方)[　 ]*[：:][　 ]*([^\n\r]{1,30})/g,
+      function(m, key, val) {
+        log.push({ type: 'deleted', label: 'フリガナ', items: [val.trim()] });
+        return key + '：【フリガナ削除】';
+      });
+  }
+
+  if (document.getElementById('filterDOB').checked) {
+    filtered = filtered.replace(/(生年月日|誕生日|DOB)[　 ]*[：:][　 ]*([^\n\r]{3,20})/g,
+      function(m, key, val) {
+        log.push({ type: 'deleted', label: '生年月日', items: [val.trim()] });
+        return key + '：【生年月日削除】';
+      });
+  }
+
+  if (document.getElementById('filterAddr').checked) {
+    filtered = filtered.replace(/(住所|ご住所|自宅住所|現住所)[　 ]*[：:][　 ]*([^\n\r]{2,60})/g,
+      function(m, key, val) {
+        log.push({ type: 'deleted', label: '住所', items: [val.trim()] });
+        return key + '：【住所削除】';
+      });
+  }
+
+  if (document.getElementById('filterPhone').checked) {
+    filtered = filtered.replace(/(電話|電話番号|携帯|携帯電話|TEL|Tel|緊急連絡)[　 ]*[：:][　 ]*([0-9０-９\-\–\—\(\)（）\s]{6,20})/g,
+      function(m, key, val) {
+        log.push({ type: 'deleted', label: '電話番号', items: [val.trim()] });
+        return key + '：【電話番号削除】';
+      });
+  }
+
+  if (document.getElementById('filterInsurance').checked) {
+    filtered = filtered.replace(/(保険証番号|被保険者番号|保険者番号|保険証ID)[　 ]*[：:][　 ]*([^\n\r]{3,20})/g,
+      function(m, key, val) {
+        log.push({ type: 'deleted', label: '保険証番号', items: [val.trim()] });
+        return key + '：【保険証番号削除】';
+      });
+  }
+
+  if (document.getElementById('filterId').checked) {
+    filtered = filtered.replace(/(患者ID|患者番号|カルテ番号|ID)[　 ]*[：:][　 ]*([A-Za-z0-9０-９\-]{3,20})/g,
+      function(m, key, val) {
+        log.push({ type: 'deleted', label: '患者ID', items: [val.trim()] });
+        return key + '：【ID削除】';
+      });
+  }
+
+  AppState.filteredText = filtered;
+
+  // ログ表示
+  var logEl = document.getElementById('filterLog');
+  if (log.length === 0) {
+    logEl.innerHTML = '<span class="kept">✓ 個人情報パターンは検出されませんでした。</span><br><span class="info">※ 手動で確認することを推奨します。</span>';
+  } else {
+    var html = '';
+    // 重複除去
+    var seen = {};
+    log.forEach(function(l) {
+      var key = l.label + JSON.stringify(l.items);
+      if (!seen[key]) {
+        seen[key] = true;
+        html += '<span class="deleted">🗑 ' + l.label + '削除: ' + l.items.map(function(x){return '"'+x.trim()+'"';}).join(', ') + '</span><br>';
+      }
+    });
+    html += '<span class="kept">✓ 上記を削除しました。年齢・性別・診断名・処方内容は保持されています。</span>';
+    logEl.innerHTML = html;
+  }
+
+  // プレビュー
+  document.getElementById('filteredPreview').textContent = filtered;
+  var bytes = getUTF8Bytes(filtered);
+  document.getElementById('filteredCount').textContent = filtered.length + ' 文字 / ' + bytes + ' bytes';
+  updateEstimate();
+  goToPanel(2);
+}
+
+function updateEstimate() {
+  var charsPerQR = parseInt(document.getElementById('charsPerQR').value) || 120;
+  var text = AppState.filteredText || AppState.rawText;
+  if (!text) { document.getElementById('qrCountEstimate').textContent = '-'; return; }
+  var estimated = Math.ceil(text.length / charsPerQR);
+  document.getElementById('qrCountEstimate').textContent = '推定 QR枚数: ' + estimated + '枚';
+}
+
+// ---- STEP 2 → 3: QR生成 ----
+function generateQRCodes() {
+  var text = AppState.filteredText;
+  if (!text.trim()) { alert('フィルター処理されたテキストがありません。'); return; }
+
+  var charsPerQR = parseInt(document.getElementById('charsPerQR').value) || 120;
+  var eccLevel = document.getElementById('eccLevel').value;
+
+  // テキストを文字単位で分割（UTF-8バイト数を考慮）
+  AppState.sessionId = generateSessionId();
+  var chunks = [];
+  var chunkTexts = [];
+
+  var i = 0;
+  while (i < text.length) {
+    var chunk = text.slice(i, i + charsPerQR);
+    chunkTexts.push(chunk);
+    i += charsPerQR;
+  }
+
+  var total = chunkTexts.length;
+  chunks = chunkTexts.map(function(c, idx) {
+    // フォーマット: SOAPQR|{sessionId}|{idx+1}/{total}|{text}
+    return 'SOAPQR|' + AppState.sessionId + '|' + (idx+1) + '/' + total + '|' + c;
+  });
+
+  AppState.chunks = chunks;
+  AppState.chunkTexts = chunkTexts;
+  AppState.currentIndex = 0;
+  AppState.isPlaying = false;
+  AppState.eccLevel = eccLevel;
+
+  // チャンク一覧を表示
+  var listEl = document.getElementById('chunkList');
+  listEl.innerHTML = '';
+  chunkTexts.forEach(function(c, i) {
+    var span = document.createElement('span');
+    span.className = 'tag';
+    span.id = 'chunk-tag-' + i;
+    span.style.cursor = 'pointer';
+    span.textContent = 'QR ' + (i+1);
+    span.title = c.slice(0, 50) + (c.length > 50 ? '...' : '');
+    span.onclick = function() { jumpToQR(i); };
+    listEl.appendChild(span);
+  });
+
+  document.getElementById('totalQRNum').textContent = total;
+  document.getElementById('sessionIdDisplay').textContent = 'セッション: ' + AppState.sessionId;
+
+  goToPanel(3);
+  displayQR(0);
+}
+
+function displayQR(index) {
+  var chunks = AppState.chunks;
+  if (chunks.length === 0) return;
+  if (index < 0) index = 0;
+  if (index >= chunks.length) index = chunks.length - 1;
+  AppState.currentIndex = index;
+
+  var canvas = document.getElementById('qrCanvas');
+  var eccLevel = AppState.eccLevel || 'M';
+
+  try {
+    drawQROnCanvas(canvas, chunks[index], eccLevel);
+  } catch(e) {
+    // サイズを小さくして再試行
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('QRエラー: テキストが長すぎます', 10, 150);
+    console.error(e);
+  }
+
+  // 進捗更新
+  var total = chunks.length;
+  var current = index + 1;
+  document.getElementById('currentQRNum').textContent = current;
+  document.getElementById('progressFill').style.width = (current/total*100) + '%';
+
+  // チャンク情報
+  var preview = AppState.chunkTexts[index];
+  document.getElementById('chunkPreview').textContent =
+    '[' + (index+1) + '/' + total + '] ' + preview.slice(0, 60) + (preview.length > 60 ? '...' : '');
+
+  // チャンクタグのハイライト
+  document.querySelectorAll('[id^="chunk-tag-"]').forEach(function(el, i){
+    el.style.border = i === index ? '1px solid var(--accent)' : '1px solid var(--border)';
+    el.style.color = i === index ? 'var(--accent)' : 'var(--text2)';
+  });
+}
+
+function prevQR() {
+  if (AppState.currentIndex > 0) displayQR(AppState.currentIndex - 1);
+}
+
+function nextQR() {
+  if (AppState.currentIndex < AppState.chunks.length - 1) {
+    displayQR(AppState.currentIndex + 1);
+  } else if (document.getElementById('loopPlay').checked) {
+    displayQR(0);
+  }
+}
+
+function jumpToQR(index) {
+  stopPlay();
+  displayQR(index);
+}
+
+function togglePlay() {
+  if (AppState.isPlaying) {
+    stopPlay();
+  } else {
+    startPlay();
+  }
+}
+
+function startPlay() {
+  AppState.isPlaying = true;
+  document.getElementById('btnPlay').textContent = '⏸ 一時停止';
+  document.getElementById('btnPlay').className = 'btn btn-warn';
+  scheduleNext();
+}
+
+function stopPlay() {
+  AppState.isPlaying = false;
+  document.getElementById('btnPlay').textContent = '▶ 再開';
+  document.getElementById('btnPlay').className = 'btn btn-primary';
+  if (AppState.timer) { clearTimeout(AppState.timer); AppState.timer = null; }
+  document.getElementById('timerDisplay').textContent = '一時停止中';
+}
+
+var timerCountdown = null;
+function scheduleNext() {
+  if (!AppState.isPlaying) return;
+  var interval = parseFloat(document.getElementById('interval').value) || 0.4;
+  var ms = Math.round(interval * 1000);
+
+  // カウントダウン表示
+  var remaining = interval;
+  if (timerCountdown) clearInterval(timerCountdown);
+  timerCountdown = setInterval(function() {
+    remaining -= 0.1;
+    if (remaining < 0) remaining = 0;
+    document.getElementById('timerDisplay').textContent = '次まで ' + remaining.toFixed(1) + 's';
+  }, 100);
+
+  AppState.timer = setTimeout(function() {
+    clearInterval(timerCountdown);
+    var next = AppState.currentIndex + 1;
+    if (next >= AppState.chunks.length) {
+      if (document.getElementById('loopPlay').checked) {
+        displayQR(0);
+        scheduleNext();
+      } else {
+        AppState.isPlaying = false;
+        document.getElementById('btnPlay').textContent = '✓ 完了';
+        document.getElementById('btnPlay').className = 'btn btn-success';
+        document.getElementById('timerDisplay').textContent = '送信完了！';
+      }
+    } else {
+      displayQR(next);
+      scheduleNext();
+    }
+  }, ms);
+}
+
+function restartAll() {
+  stopPlay();
+  displayQR(0);
+  document.getElementById('btnPlay').textContent = '▶ 開始';
+  document.getElementById('btnPlay').className = 'btn btn-primary';
+  document.getElementById('timerDisplay').textContent = '待機中';
+}
+
+// キーボードショートカット (送信モード)
+document.addEventListener('keydown', function(e) {
+  if (document.getElementById('panel3').classList.contains('active') &&
+      document.getElementById('sendModeWrap').style.display !== 'none') {
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    if (e.code === 'ArrowLeft') { stopPlay(); prevQR(); }
+    if (e.code === 'ArrowRight') { stopPlay(); nextQR(); }
+    if (e.code === 'KeyR') { restartAll(); }
+  }
+});
+
+// ============================================================
+// モード切替
+// ============================================================
+function switchMode(mode) {
+  var sendWrap = document.getElementById('sendModeWrap');
+  var recvWrap = document.getElementById('recvModeWrap');
+  var tabSend = document.getElementById('modeTabSend');
+  var tabRecv = document.getElementById('modeTabRecv');
+  if (mode === 'send') {
+    sendWrap.style.display = 'block';
+    recvWrap.style.display = 'none';
+    tabSend.classList.add('active');
+    tabRecv.classList.remove('active');
+  } else {
+    sendWrap.style.display = 'none';
+    recvWrap.style.display = 'block';
+    tabSend.classList.remove('active');
+    tabRecv.classList.add('active');
+    initBarcodeReceiver();
+  }
+}
+
+// ============================================================
+// バーコードリーダー受信モード
+// ============================================================
+var BarcodeRcv = {
+  sessionId: null,
+  totalChunks: 0,
+  receivedChunks: {},
+  done: false,
+  inputBuffer: ''
+};
+
+function initBarcodeReceiver() {
+  // リセット状態を確認してUIを初期化
+  document.getElementById('brDot').classList.add('active');
+  document.getElementById('brStatusText').textContent = '🎯 待機中 — バーコードリーダーでQRコードをスキャンしてください';
+  document.getElementById('brProgressWrap').style.display = 'none';
+  document.getElementById('brResultCard').style.display = 'none';
+}
+
+// バーコードリーダーのキーボード入力を受け取る（全画面で常時監視）
+document.addEventListener('keydown', function(e) {
+  if (document.getElementById('recvModeWrap').style.display === 'none') return;
+  // テキストエリア等にフォーカスがある場合は無視
+  var tag = document.activeElement && document.activeElement.tagName;
+  if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
+
+  if (e.key === 'Enter') {
+    // バッファが溜まっていたら処理
+    var payload = BarcodeRcv.inputBuffer.trim();
+    BarcodeRcv.inputBuffer = '';
+    if (payload) processBarcodePayload(payload);
+  } else if (e.key.length === 1) {
+    // 印字可能文字をバッファに追加
+    BarcodeRcv.inputBuffer += e.key;
+    e.preventDefault();
+  } else if (e.key === 'Backspace') {
+    BarcodeRcv.inputBuffer = BarcodeRcv.inputBuffer.slice(0, -1);
+  }
+});
+
+function processBarcodePayload(raw) {
+  if (!raw.startsWith('SOAPQR|')) return;
+  var parts = raw.split('|');
+  if (parts.length < 4) return;
+  var sessionId = parts[1], indexPart = parts[2], text = parts.slice(3).join('|');
+  var m = indexPart.match(/^(\d+)\/(\d+)$/);
+  if (!m) return;
+  var idx = parseInt(m[1]), total = parseInt(m[2]);
+
+  if (BarcodeRcv.sessionId === null) {
+    BarcodeRcv.sessionId = sessionId;
+    BarcodeRcv.totalChunks = total;
+    document.getElementById('brProgressWrap').style.display = 'block';
+    document.getElementById('brSessionLabel').textContent = '| Session: ' + sessionId;
+    var chips = '';
+    for (var i = 1; i <= total; i++) chips += '<span class="chunk-chip" id="br-chip-' + i + '">' + i + '</span>';
+    document.getElementById('brChips').innerHTML = chips;
+  } else if (BarcodeRcv.sessionId !== sessionId) {
+    // 新しいセッション開始
+    resetBarcodeReceiver();
+    processBarcodePayload(raw);
+    return;
+  }
+
+  if (!BarcodeRcv.receivedChunks[idx]) {
+    BarcodeRcv.receivedChunks[idx] = text;
+    var chip = document.getElementById('br-chip-' + idx);
+    if (chip) chip.classList.add('ok');
+    updateBarcodeProgress();
+  }
+}
+
+function updateBarcodeProgress() {
+  var rcv = Object.keys(BarcodeRcv.receivedChunks).length;
+  var total = BarcodeRcv.totalChunks;
+  var pct = total > 0 ? (rcv / total * 100) : 0;
+  document.getElementById('brProgressBar').style.width = pct + '%';
+  document.getElementById('brProgressLabel').textContent = rcv + ' / ' + total + ' チャンク受信';
+  document.getElementById('brStatusText').textContent = '📡 受信中... ' + rcv + ' / ' + total + ' 枚';
+
+  if (rcv >= total) {
+    BarcodeRcv.done = true;
+    document.getElementById('brDot').classList.remove('active');
+    document.getElementById('brDot').style.background = 'var(--ok)';
+    document.getElementById('brStatusText').textContent = '✅ 全チャンク受信完了！テキストをコピーしてカルテに貼り付けてください。';
+    // アセンブル
+    var keys = Object.keys(BarcodeRcv.receivedChunks).map(Number).sort(function(a,b){return a-b;});
+    var assembled = keys.map(function(k){return BarcodeRcv.receivedChunks[k];}).join('');
+    document.getElementById('brReceivedText').textContent = assembled;
+    document.getElementById('brResultCard').style.display = 'block';
+  }
+}
+
+function copyBarcodeResult() {
+  var text = document.getElementById('brReceivedText').textContent;
+  navigator.clipboard.writeText(text).then(function(){
+    alert('クリップボードにコピーしました。カルテに貼り付けてください。');
+  }).catch(function(){
+    var el = document.getElementById('brReceivedText');
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('copy');
+    alert('コピーしました。');
+  });
+}
+
+function resetBarcodeReceiver() {
+  BarcodeRcv.sessionId = null;
+  BarcodeRcv.totalChunks = 0;
+  BarcodeRcv.receivedChunks = {};
+  BarcodeRcv.done = false;
+  BarcodeRcv.inputBuffer = '';
+  document.getElementById('brDot').classList.add('active');
+  document.getElementById('brDot').style.background = '';
+  document.getElementById('brStatusText').textContent = '🎯 待機中 — バーコードリーダーでQRコードをスキャンしてください';
+  document.getElementById('brProgressWrap').style.display = 'none';
+  document.getElementById('brResultCard').style.display = 'none';
+  document.getElementById('brChips').innerHTML = '';
+  document.getElementById('brProgressBar').style.width = '0%';
+}
+</script>
+
+</body>
+</html>
