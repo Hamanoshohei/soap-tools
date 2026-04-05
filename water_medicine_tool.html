@@ -426,24 +426,35 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="mbox">
     <div class="m-ttl" id="camTtl">📷 バーコードをスキャン</div>
 
-    <!-- カメラビュー -->
-    <div class="cam-video-wrap" id="camVideoWrap">
-      <video id="zxingVideo" playsinline muted></video>
-      <div class="cam-overlay">
-        <div class="cam-frame"></div>
-        <div class="cam-line"></div>
-        <div class="cam-hint-ov" id="camHintOv">バーコードを枠内にかざしてください</div>
+    <!-- ① メイン: 撮影して読み取る（iPhoneで最も確実） -->
+    <div style="background:var(--pl);border:2px solid var(--primary);border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-size:.82rem;font-weight:700;color:var(--primary);margin-bottom:8px">📷 撮影して読み取る（推奨）</div>
+      <p style="font-size:.76rem;color:var(--sub);margin-bottom:10px;line-height:1.6">バーコードに<strong>10〜20cm</strong>近づけて撮影してください。<br>ネイティブカメラが開くので、タップでピント合わせができます。</p>
+      <label style="display:block;background:var(--primary);color:#fff;text-align:center;padding:14px;border-radius:9px;font-size:1rem;font-weight:700;cursor:pointer;position:relative">
+        📸 カメラを開いて撮影
+        <input type="file" id="bcPhoto" accept="image/*" capture="environment" onchange="bcFromPhoto(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+      </label>
+    </div>
+
+    <!-- ② サブ: ライブカメラ（Android/PCで有効） -->
+    <details id="liveCamDetails" style="margin-bottom:10px">
+      <summary style="font-size:.82rem;color:var(--sub);cursor:pointer;padding:8px 4px;list-style:none;display:flex;align-items:center;gap:6px">
+        <span style="border:1.5px solid var(--bdr);border-radius:6px;padding:2px 8px;font-size:.74rem">▶ ライブカメラを使う（Android・PC）</span>
+      </summary>
+      <div style="margin-top:8px">
+        <!-- カメラビュー -->
+        <div class="cam-video-wrap" id="camVideoWrap">
+          <video id="zxingVideo" playsinline muted></video>
+          <div class="cam-overlay">
+            <div class="cam-frame"></div>
+            <div class="cam-line"></div>
+            <div class="cam-hint-ov" id="camHintOv">バーコードを枠内にかざしてください</div>
+          </div>
+        </div>
+        <!-- ステータス -->
+        <div class="cam-status" id="camStatus">「ライブカメラを使う」を開くと起動します</div>
       </div>
-    </div>
-
-    <!-- ステータス -->
-    <div class="cam-status" id="camStatus">カメラを起動中...</div>
-
-    <!-- 写真から読み取る（フォールバック） -->
-    <div class="photo-zone">
-      <p>📁 写真から読み取る（カメラが使えない場合・または撮影して読み取る）</p>
-      <input type="file" id="bcPhoto" accept="image/*" capture="environment" onchange="bcFromPhoto(this)">
-    </div>
+    </details>
 
     <!-- スキャン結果 -->
     <div class="scan-result" id="scanResult">
@@ -730,46 +741,73 @@ async function openCam(mode,title){
   document.getElementById('scanResult').classList.remove('on');
   document.getElementById('btnUseCam').disabled=true;
   document.getElementById('bcPhoto').value='';
-  document.getElementById('camHintOv').textContent=
-    mode.startsWith('signer_')?'職員証のバーコードをかざしてください':
+  const hint=mode.startsWith('signer_')?'職員証のバーコードをかざしてください':
     mode.startsWith('dc_')?'薬剤瓶のバーコードをかざしてください':
     'バーコードを枠内にかざしてください';
-  setCamStatus('カメラを起動中...');
+  if(document.getElementById('camHintOv'))document.getElementById('camHintOv').textContent=hint;
+  setCamStatus('「ライブカメラを使う」を開くと起動します');
   document.getElementById('mCam').classList.add('on');
-
-  // 前のスキャナーをリセット
+  // details開閉でライブカメラ起動
+  const det=document.getElementById('liveCamDetails');
+  det.removeEventListener('toggle',det._camToggle||(()=>{}));
+  det._camToggle=async()=>{
+    if(det.open){await _startLiveCam();}else{await _stopReader();setCamStatus('「ライブカメラを使う」を開くと起動します');}
+  };
+  det.addEventListener('toggle',det._camToggle);
+  // 前のスキャナーをリセット（detailsは閉じた状態でモーダルを開く）
+  det.open=false;
   await _stopReader();
+}
 
-  if(typeof ZXing==='undefined'){
-    setCamStatus('ZXing.jsが読み込まれていません。インターネット接続を確認してください。','err');
-    return;
-  }
-
+async function _startLiveCam(){
+  if(typeof ZXing==='undefined'){setCamStatus('ZXing.jsが未読み込みです','err');return;}
+  await _stopReader();
+  setCamStatus('ライブカメラを起動中...');
   try{
-    _reader=new ZXing.BrowserMultiFormatReader();
-    // 後面カメラを優先
-    const devices=await ZXing.BrowserCodeReader.listVideoInputDevices();
-    let deviceId=undefined;
-    if(devices&&devices.length>0){
-      const back=devices.find(d=>/back|rear|environment|後/i.test(d.label));
-      deviceId=(back||devices[devices.length-1]).deviceId;
-    }
+    // iOS Safari対応: decodeFromConstraints を使用（listVideoInputDevices不要）
+    const hints=new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.EAN_13,
+      ZXing.BarcodeFormat.EAN_8,
+      ZXing.BarcodeFormat.QR_CODE,
+      ZXing.BarcodeFormat.DATA_MATRIX,
+      ZXing.BarcodeFormat.ITF,
+      ZXing.BarcodeFormat.CODABAR,
+      ZXing.BarcodeFormat.CODE_39,
+    ]);
+    _reader=new ZXing.BrowserMultiFormatReader(hints,300);
     _scanning=true;
-    // decodeFromVideoDevice: コールバック方式でリアルタイムスキャン
-    await _reader.decodeFromVideoDevice(deviceId,'zxingVideo',(result,err)=>{
-      if(!_scanning)return;
-      if(result){onBC(result.getText());}
-      // errはフレームごとに発生する正常なnull/notFoundなので無視
-    });
+    await _reader.decodeFromConstraints(
+      {video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}},
+      'zxingVideo',
+      (result,err)=>{
+        if(!_scanning)return;
+        if(result){onBC(result.getText());}
+      }
+    );
     setCamStatus('バーコードを枠内にかざしてください ✦');
   }catch(err){
     const msg=String(err);
     if(/permission|notallowed/i.test(msg)){
-      setCamStatus('カメラへのアクセスが拒否されました。\nSafari: 設定 → Safari → カメラ を「許可」にしてください。','err');
+      setCamStatus('📱 カメラが拒否されました\n設定 → Safari → カメラ → 許可\n\n↓「撮影して読み取る」は引き続き使えます','err');
     }else if(/notfound|no camera|devicenotfound/i.test(msg)){
-      setCamStatus('カメラが見つかりません。「写真から読み取る」をご利用ください。','err');
+      setCamStatus('カメラが見つかりません。下の「撮影して読み取る」をご利用ください。','err');
+    }else if(/overconstrained/i.test(msg)){
+      // 制約を緩めてリトライ
+      try{
+        _reader=new ZXing.BrowserMultiFormatReader();
+        _scanning=true;
+        await _reader.decodeFromConstraints({video:{facingMode:'environment'}},'zxingVideo',(result,err)=>{
+          if(!_scanning)return;
+          if(result){onBC(result.getText());}
+        });
+        setCamStatus('バーコードを枠内にかざしてください ✦');
+      }catch(e2){
+        setCamStatus('ライブカメラ起動失敗。↓「撮影して読み取る」をお使いください。','err');
+      }
     }else{
-      setCamStatus('カメラを起動できませんでした。「写真から読み取る」をご利用ください。','err');
+      setCamStatus('ライブカメラ起動失敗。↓「撮影して読み取る」をお使いください。','err');
     }
     console.warn('[ZXing] camera error:',err);
   }
@@ -790,27 +828,67 @@ async function _stopReader(){
 
 async function stopCam(){
   await _stopReader();
+  // detailsのtoggleリスナーを解除
+  const det=document.getElementById('liveCamDetails');
+  if(det&&det._camToggle){det.removeEventListener('toggle',det._camToggle);det._camToggle=null;}
   document.getElementById('mCam').classList.remove('on');
   _val='';
 }
 
-// 写真から読み取る（ZXing.scanFile）
+// ─── 画像前処理（canvas リサイズ + 反転オプション）────────────
+// iOS写真は最大12MP → ZXingが失敗するため1280px以内にリサイズ
+async function prepareCanvas(file,invert=false){
+  const canvas=document.createElement('canvas');
+  const ctx=canvas.getContext('2d');
+  const img=new Image();
+  const url=URL.createObjectURL(file);
+  img.src=url;
+  await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;});
+  URL.revokeObjectURL(url);
+  const maxDim=1280;
+  let w=img.width,h=img.height;
+  if(w>maxDim||h>maxDim){const s=maxDim/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+  canvas.width=w;canvas.height=h;
+  ctx.drawImage(img,0,0,w,h);
+  if(invert){
+    const d=ctx.getImageData(0,0,w,h);
+    for(let i=0;i<d.data.length;i+=4){d.data[i]=255-d.data[i];d.data[i+1]=255-d.data[i+1];d.data[i+2]=255-d.data[i+2];}
+    ctx.putImageData(d,0,0);
+  }
+  return canvas;
+}
+
+// 写真から読み取る（canvas前処理 + 反転リトライ付き）
 async function bcFromPhoto(input){
   const file=input.files[0];if(!file)return;
   setCamStatus('写真を解析中...');
   if(typeof ZXing==='undefined'){showToast('ZXingが読み込まれていません',2500,true);return;}
-  try{
-    const reader=new ZXing.BrowserMultiFormatReader();
-    const img=new Image();
-    const url=URL.createObjectURL(file);
-    img.src=url;
-    await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;});
-    const result=await reader.decodeFromImageElement(img);
-    URL.revokeObjectURL(url);
-    onBC(result.getText());
-  }catch(err){
-    showToast('バーコードを検出できませんでした\n\n【撮影のコツ】\n・バーコードを大きく・鮮明に\n・明るい場所で撮影\n・手ブレなし',5000,true);
-    setCamStatus('写真からの読み取りに失敗しました','err');
+  const hints=new Map();
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
+    ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
+    ZXing.BarcodeFormat.QR_CODE,ZXing.BarcodeFormat.DATA_MATRIX,
+    ZXing.BarcodeFormat.ITF,ZXing.BarcodeFormat.CODABAR,ZXing.BarcodeFormat.CODE_39,
+  ]);
+  let ok=false;
+  for(const inv of [false,true]){
+    try{
+      const canvas=await prepareCanvas(file,inv);
+      // canvas → blob URL → img → ZXing scan
+      const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92));
+      const blobUrl=URL.createObjectURL(blob);
+      const scanImg=new Image();
+      scanImg.src=blobUrl;
+      await new Promise((res,rej)=>{scanImg.onload=res;scanImg.onerror=rej;});
+      const reader=new ZXing.BrowserMultiFormatReader(hints);
+      const result=await reader.decodeFromImageElement(scanImg);
+      URL.revokeObjectURL(blobUrl);
+      onBC(result.getText());
+      ok=true;break;
+    }catch(e){/* 次の試行へ */}
+  }
+  if(!ok){
+    showToast('バーコードを検出できませんでした\n\n【撮影のコツ】\n・バーコードを画面いっぱいに大きく映す\n・バーコードまで10〜20cm程度に近づける\n・明るい場所 / フラッシュON\n・画面に対して水平に撮影する',6000,true);
+    setCamStatus('読み取り失敗。バーコードを近くで大きく撮ってください','err');
   }
   input.value='';
 }
