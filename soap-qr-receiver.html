@@ -127,6 +127,7 @@
     .label { font-size: 13px; }
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body>
 
@@ -232,8 +233,10 @@ P: （薬剤師計画）
 
       <div id="noBarcodeDetector" style="display:none;" class="notice">
         <strong>⚠ BarcodeDetector API 未対応ブラウザです。</strong><br>
-        Chrome / Edge / Safari 17+ をご使用ください。または下の「手動入力」をお使いください。
+        jsQRライブラリで代替スキャン中です。カメラは通常通り使えます。
       </div>
+      <!-- jsQR用 非表示キャンバス -->
+      <canvas id="jsqrCanvas" style="display:none;"></canvas>
 
       <div id="cameraSection">
         <div id="cameraWrap">
@@ -433,14 +436,25 @@ function resetScanState(){
 }
 
 async function startCamera(){
-  if(!('BarcodeDetector' in window)){document.getElementById('noBarcodeDetector').style.display='block';document.getElementById('cameraWrap').style.display='none';return;}
+  var hasBarcode='BarcodeDetector' in window;
+  var hasJsQR=typeof jsQR !== 'undefined';
+  if(!hasBarcode){
+    if(!hasJsQR){
+      // どちらも使えない場合のみカメラ非表示
+      document.getElementById('noBarcodeDetector').style.display='block';
+      document.getElementById('cameraWrap').style.display='none';
+      return;
+    }
+    // jsQR fallback: 警告は表示するがカメラは起動する
+    document.getElementById('noBarcodeDetector').style.display='block';
+  }
   try{
     App.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
     var video=document.getElementById('videoEl');video.srcObject=App.stream;await video.play();
-    App.detector=new BarcodeDetector({formats:['qr_code']});
+    App.detector=hasBarcode?new BarcodeDetector({formats:['qr_code']}):null;
     document.getElementById('scanStatus').textContent='📡 スキャン中... QRにカメラを向けてください';
     startScanLoop();
-  }catch(e){document.getElementById('scanStatus').textContent='⚠ カメラ起動失敗: '+e.message;document.getElementById('noBarcodeDetector').style.display='block';console.error(e);}
+  }catch(e){document.getElementById('scanStatus').textContent='⚠ カメラ起動失敗: '+e.message;console.error(e);}
 }
 
 function stopCamera(){if(App.scanTimer){clearInterval(App.scanTimer);App.scanTimer=null;}if(App.stream){App.stream.getTracks().forEach(function(t){t.stop();});App.stream=null;}}
@@ -449,9 +463,24 @@ var lastScanned={};
 function startScanLoop(){
   App.scanTimer=setInterval(async function(){
     var video=document.getElementById('videoEl');
-    if(!App.detector||video.readyState<2)return;
-    try{var codes=await App.detector.detect(video);codes.forEach(function(code){processQRPayload(code.rawValue);});}catch(e){}
-  },150);
+    if(video.readyState<2)return;
+    if(App.detector){
+      // BarcodeDetector (ネイティブ)
+      try{var codes=await App.detector.detect(video);codes.forEach(function(code){processQRPayload(code.rawValue);});}catch(e){}
+    }else if(typeof jsQR!=='undefined'){
+      // jsQR フォールバック (iOS Safari等)
+      try{
+        var canvas=document.getElementById('jsqrCanvas');
+        var ctx=canvas.getContext('2d');
+        canvas.width=video.videoWidth||640;
+        canvas.height=video.videoHeight||480;
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+        var imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+        var code=jsQR(imgData.data,imgData.width,imgData.height,{inversionAttempts:'dontInvert'});
+        if(code&&code.data)processQRPayload(code.data);
+      }catch(e){}
+    }
+  },200);
 }
 
 function processQRPayload(raw){
