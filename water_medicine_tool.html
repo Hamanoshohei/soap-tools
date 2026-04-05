@@ -6,8 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>水剤調製支援システム</title>
-<!-- Tesseract.js: 日本語OCR (初回のみCDNから取得・以降キャッシュ) -->
+<!-- OCR: 日本語対応 (初回のみCDNからキャッシュ) -->
 <script src="https://unpkg.com/tesseract.js@v4.1.1/dist/tesseract.min.js"></script>
+<!-- バーコードスキャン: iOS/Android両対応 -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 :root{
   --primary:#1565C0;--pd:#0D47A1;--pl:#E3F2FD;
@@ -21,48 +23,48 @@
 html,body{height:100%;overflow-x:hidden}
 body{font-family:-apple-system,'Hiragino Sans','Yu Gothic',sans-serif;background:var(--bg);color:var(--txt);font-size:16px;-webkit-font-smoothing:antialiased}
 
-/* ── HEADER ── */
-.hdr{background:var(--primary);color:#fff;height:56px;display:flex;align-items:center;padding:0 16px;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.22)}
-.hdr-ttl{flex:1;font-size:1.05rem;font-weight:700}
-.badge-net{background:rgba(255,255,255,.18);padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:600}
-.btn-back{background:rgba(255,255,255,.2);border:none;color:#fff;height:40px;padding:0 14px;border-radius:8px;cursor:pointer;font-size:.9rem;font-family:inherit;display:none;align-items:center;gap:6px;flex-shrink:0}
+.hdr{background:var(--primary);color:#fff;height:56px;display:flex;align-items:center;padding:0 12px;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.22)}
+.hdr-ttl{flex:1;font-size:1rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge-net{background:rgba(255,255,255,.18);padding:3px 8px;border-radius:20px;font-size:.68rem;font-weight:600;flex-shrink:0}
+.btn-back{background:rgba(255,255,255,.2);border:none;color:#fff;height:40px;padding:0 12px;border-radius:8px;cursor:pointer;font-size:.88rem;font-family:inherit;display:none;align-items:center;gap:6px;flex-shrink:0}
 .btn-back:active{background:rgba(255,255,255,.35)}
 
-/* ── SCREEN ── */
-.scr{display:none;padding:16px;max-width:860px;margin:0 auto}
+.scr{display:none;padding:12px;max-width:860px;margin:0 auto}
 .scr.on{display:block;animation:fi .15s ease}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-/* ── HOME ── */
-.stats{display:flex;gap:10px;margin-bottom:14px}
-.stat{flex:1;background:var(--card);border-radius:12px;padding:14px 8px;text-align:center;box-shadow:var(--sh)}
-.stat-n{font-size:2rem;font-weight:700;color:var(--primary);line-height:1}
-.stat-l{font-size:.7rem;color:var(--sub);margin-top:4px}
-.hgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
-.hbtn{background:var(--card);border:2px solid var(--bdr);border-radius:var(--r);padding:22px 14px;text-align:center;cursor:pointer;box-shadow:var(--sh);transition:all .15s}
+.stats{display:flex;gap:8px;margin-bottom:12px}
+.stat{flex:1;background:var(--card);border-radius:12px;padding:12px 6px;text-align:center;box-shadow:var(--sh)}
+.stat-n{font-size:1.7rem;font-weight:700;color:var(--primary);line-height:1}
+.stat-l{font-size:.65rem;color:var(--sub);margin-top:4px}
+.hgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.hbtn{background:var(--card);border:2px solid var(--bdr);border-radius:var(--r);padding:18px 12px;text-align:center;cursor:pointer;box-shadow:var(--sh);transition:all .15s}
 .hbtn:active{transform:scale(.97)}
 .hbtn.main{background:var(--primary);border-color:var(--primary);color:#fff}
-.hbtn .ico{font-size:2.2rem;display:block;margin-bottom:10px}
-.hbtn h2{font-size:1rem;margin-bottom:4px}
-.hbtn p{font-size:.78rem;opacity:.72}
-.notice{background:#FFF8E1;border-left:4px solid var(--warn);padding:12px 14px;border-radius:8px;font-size:.84rem;color:#5D4037}
+.hbtn .ico{font-size:2rem;display:block;margin-bottom:8px}
+.hbtn h2{font-size:.95rem;margin-bottom:3px}
+.hbtn p{font-size:.74rem;opacity:.72}
+.notice{background:#FFF8E1;border-left:4px solid var(--warn);padding:12px 14px;border-radius:8px;font-size:.82rem;color:#5D4037}
 
-/* ── CARD ── */
-.card{background:var(--card);border-radius:var(--r);padding:18px;box-shadow:var(--sh);margin-bottom:14px}
-.card-ttl{font-size:.92rem;font-weight:700;color:var(--primary);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--pl);display:flex;align-items:center;gap:8px}
+.card{background:var(--card);border-radius:var(--r);padding:16px;box-shadow:var(--sh);margin-bottom:12px}
+.card-ttl{font-size:.9rem;font-weight:700;color:var(--primary);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--pl);display:flex;align-items:center;gap:8px}
 
-/* ── FORM ── */
-.fld{margin-bottom:13px}
-label{display:block;font-size:.8rem;font-weight:600;color:var(--sub);margin-bottom:5px}
-input[type=text],input[type=number],select{width:100%;height:var(--tap);padding:0 14px;border:2px solid var(--bdr);border-radius:9px;font-size:1rem;font-family:inherit;color:var(--txt);background:#fff;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+.tabs{display:flex;gap:2px;background:var(--bdr);border-radius:10px;padding:3px;margin-bottom:14px}
+.tab-btn{flex:1;background:transparent;border:none;padding:11px 8px;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;color:var(--sub);font-family:inherit;transition:all .15s}
+.tab-btn.on{background:#fff;color:var(--primary);box-shadow:0 1px 6px rgba(0,0,0,.13)}
+
+.fld{margin-bottom:12px}
+label{display:block;font-size:.78rem;font-weight:600;color:var(--sub);margin-bottom:4px}
+input[type=text],input[type=number],select{width:100%;height:var(--tap);padding:0 12px;border:2px solid var(--bdr);border-radius:9px;font-size:1rem;font-family:inherit;color:var(--txt);background:#fff;transition:border-color .2s;-webkit-appearance:none;appearance:none}
 input:focus,select:focus{outline:none;border-color:var(--primary);background:var(--pl)}
-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px;cursor:pointer}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;cursor:pointer}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sig-row{display:flex;gap:8px;align-items:center}
+.sig-row input{flex:1}
 
-/* ── BUTTON ── */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:var(--tap);padding:0 18px;border:none;border-radius:9px;font-size:.95rem;font-family:inherit;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;-webkit-appearance:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:var(--tap);padding:0 16px;border:none;border-radius:9px;font-size:.93rem;font-family:inherit;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;-webkit-appearance:none}
 .btn:active{transform:scale(.96)}
 .btn-p{background:var(--primary);color:#fff}
 .btn-ok{background:var(--ok);color:#fff}
@@ -70,238 +72,252 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .btn-ol{background:#fff;color:var(--primary);border:2px solid var(--primary)}
 .btn-gy{background:#E2E8F0;color:var(--txt)}
 .btn-dk{background:#1A1A2E;color:#fff}
-.btn-sm{height:40px;padding:0 13px;font-size:.84rem}
+.btn-sm{height:44px;padding:0 12px;font-size:.84rem}
 .btn-blk{width:100%}
 .btn:disabled{opacity:.4;pointer-events:none}
 .brow{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
 .brow .btn{flex:1}
 
-/* ── DRUG MASTER ── */
-.di{background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+.di{background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px}
 .di-info{flex:1;min-width:0}
-.di-name{font-weight:700;font-size:1rem}
-.di-det{font-size:.81rem;color:var(--sub);margin-top:2px}
-.di-cb{background:var(--pl);color:var(--primary);padding:3px 10px;border-radius:20px;font-size:.8rem;font-weight:700;white-space:nowrap;flex-shrink:0;align-self:flex-start}
-.bc-badge{display:inline-flex;align-items:center;gap:4px;background:var(--okl);color:var(--ok);padding:2px 8px;border-radius:6px;font-size:.74rem;margin-top:4px}
+.di-name{font-weight:700;font-size:.97rem}
+.di-det{font-size:.78rem;color:var(--sub);margin-top:2px}
+.di-cb{background:var(--pl);color:var(--primary);padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:700;white-space:nowrap;flex-shrink:0;align-self:flex-start}
+.bc-badge{display:inline-flex;align-items:center;gap:4px;background:var(--okl);color:var(--ok);padding:2px 8px;border-radius:6px;font-size:.72rem;margin-top:4px}
 .di-act{display:flex;gap:6px;flex-shrink:0;align-self:flex-start}
-.empty{text-align:center;padding:36px 16px;color:var(--sub)}
-.empty-ico{font-size:3rem;margin-bottom:10px}
+.empty{text-align:center;padding:30px 16px;color:var(--sub)}
+.empty-ico{font-size:2.8rem;margin-bottom:8px}
 
-/* ── RX DRUG ROWS ── */
-.drow{background:#FAFBFC;border:2px solid var(--bdr);border-radius:11px;padding:14px;margin-bottom:12px;position:relative}
+.phi{background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px}
+.phi-name{font-weight:700;font-size:.97rem}
+.phi-det{font-size:.78rem;color:var(--sub);margin-top:2px}
+
+.drow{background:#FAFBFC;border:2px solid var(--bdr);border-radius:11px;padding:12px;margin-bottom:12px;position:relative}
 .drow.act{border-color:var(--primary);background:var(--pl)}
-.drow-n{position:absolute;top:-11px;left:13px;background:var(--primary);color:#fff;padding:2px 10px;border-radius:20px;font-size:.74rem;font-weight:700}
+.drow-n{position:absolute;top:-11px;left:13px;background:var(--primary);color:#fff;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700}
 .drow-in{margin-top:8px}
-.prev{font-size:.9rem;color:var(--primary);font-weight:700;padding:8px 12px;background:#fff;border-radius:6px;margin-top:8px;display:none}
+.prev{font-size:.9rem;color:var(--primary);font-weight:700;padding:7px 12px;background:#fff;border-radius:6px;margin-top:8px;display:none}
 .prev.on{display:block}
 
-/* ── USB AREA ── */
-.usb{background:#F7FAFC;border:2px dashed var(--bdr);border-radius:11px;padding:15px;margin-bottom:12px}
-.usb>label{font-weight:700;color:var(--txt);font-size:.88rem;margin-bottom:8px}
-.usb-hint{font-size:.76rem;color:var(--sub);margin-top:7px}
-
-/* ── OCR PROGRESS ── */
 .pbar-wrap{background:#E2E8F0;border-radius:6px;height:10px;overflow:hidden;margin:10px 0}
 .pbar-fill{height:100%;background:var(--primary);border-radius:6px;transition:width .3s ease;width:0%}
 .ocr-step{display:none}
 .ocr-step.on{display:block}
 
-/* ── RESULT ── */
-.rb{background:linear-gradient(135deg,var(--pl),#F0F4F8);border:2px solid var(--primary);border-radius:12px;padding:18px;margin-bottom:14px}
-.rb-name{font-size:1.1rem;font-weight:700;margin-bottom:13px}
-.rrow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.06)}
+.rb{background:linear-gradient(135deg,var(--pl),#F0F4F8);border:2px solid var(--primary);border-radius:12px;padding:16px;margin-bottom:12px}
+.rb-name{font-size:1.05rem;font-weight:700;margin-bottom:12px}
+.rrow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06)}
 .rrow:last-child{border-bottom:none}
-.rl{font-size:.83rem;color:var(--sub)}
-.rv{font-size:1rem;font-weight:700;color:var(--pd)}
-.rv.big{font-size:1.6rem;color:var(--primary)}
-.formula{background:#fff;border-radius:6px;padding:8px 12px;margin-top:9px;font-size:.78rem;color:var(--sub);font-family:monospace}
-.pt-bar{background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:12px 16px;display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px}
-.pi-l{font-size:.7rem;color:var(--sub);font-weight:600}
-.pi-v{font-size:.95rem;font-weight:700}
+.rl{font-size:.82rem;color:var(--sub)}
+.rv{font-size:.97rem;font-weight:700;color:var(--pd)}
+.rv.big{font-size:1.5rem;color:var(--primary)}
+.formula{background:#fff;border-radius:6px;padding:7px 12px;margin-top:8px;font-size:.76rem;color:var(--sub);font-family:monospace}
+.pt-bar{background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:12px;display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.pi-l{font-size:.68rem;color:var(--sub);font-weight:600}
+.pi-v{font-size:.92rem;font-weight:700}
 
-/* ── DOUBLE CHECK ── */
-.dc-blk{border:2px solid var(--bdr);border-radius:10px;overflow:hidden;margin-bottom:12px}
-.dc-hdr{background:#F7FAFC;padding:12px 16px;font-weight:700;font-size:.88rem;border-bottom:1px solid var(--bdr)}
-.dc-it{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--bdr);cursor:pointer;min-height:var(--tap)}
-.dc-it:last-child{border-bottom:none}
-.dc-it input[type=checkbox]{width:28px;height:28px;accent-color:var(--ok);flex-shrink:0;cursor:pointer}
-.dc-lbl{flex:1;font-size:.9rem;line-height:1.4}
-.dc-it.done .dc-lbl{color:var(--ok);text-decoration:line-through;opacity:.7}
-.signers{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
-.done-banner{background:var(--okl);border:2px solid var(--ok);border-radius:12px;padding:20px;text-align:center;margin-bottom:14px;display:none}
+/* BARCODE VERIFY CARDS */
+.bc-card{border:2px solid var(--bdr);border-radius:12px;margin-bottom:12px;overflow:hidden;transition:border-color .3s}
+.bc-card.verified{border-color:var(--ok)}
+.bc-card.error{border-color:var(--ng)}
+.bc-card-hdr{background:#F7FAFC;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.bc-card.verified .bc-card-hdr{background:var(--okl)}
+.bc-card.error .bc-card-hdr{background:#FFEBEE}
+.bc-drug-name{flex:1;font-weight:700;font-size:.97rem}
+.bc-status{font-size:.8rem;font-weight:600;padding:4px 12px;border-radius:20px;flex-shrink:0}
+.bc-status.pending{background:#E2E8F0;color:var(--sub)}
+.bc-status.ok{background:var(--okl);color:var(--ok)}
+.bc-status.ng{background:#FFEBEE;color:var(--ng)}
+.bc-card-body{padding:14px 16px}
+.bc-vol{font-size:.86rem;color:var(--sub);margin-bottom:12px}
+.bc-scan-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bc-scan-val{flex:1;font-size:.8rem;color:var(--sub);min-width:0;word-break:break-all}
+.bc-scan-val.ok{color:var(--ok);font-weight:700}
+.bc-scan-val.ng{color:var(--ng);font-weight:700}
+.bc-expected{font-size:.75rem;color:var(--sub);margin-top:6px;padding:6px 10px;background:#f7fafc;border-radius:6px;border:1px solid var(--bdr)}
+
+.signer-card{background:#fff;border:1.5px solid var(--bdr);border-radius:12px;padding:14px;margin-top:12px}
+.signer-ttl{font-size:.82rem;font-weight:700;color:var(--sub);margin-bottom:10px}
+
+.done-banner{background:var(--okl);border:2px solid var(--ok);border-radius:12px;padding:18px;text-align:center;margin-bottom:12px;display:none}
 .done-banner.on{display:block}
-.done-banner h2{color:var(--ok);font-size:1.15rem;margin-bottom:6px}
+.done-banner h2{color:var(--ok);font-size:1.1rem;margin-bottom:6px}
 
-/* ── HISTORY ── */
-.hi{background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:14px;margin-bottom:8px}
-.hi-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.hi-time{font-size:.78rem;color:var(--sub);margin-left:auto}
-.hi-drugs{font-size:.8rem;color:var(--sub)}
-.hi-sig{font-size:.76rem;color:var(--sub);margin-top:4px}
-.bdg{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.74rem;font-weight:600}
+.hi{background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px}
+.hi-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.hi-time{font-size:.76rem;color:var(--sub);margin-left:auto}
+.hi-drugs{font-size:.78rem;color:var(--sub)}
+.hi-sig{font-size:.74rem;color:var(--sub);margin-top:4px}
+.bdg{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600}
 .bdg-ok{background:var(--okl);color:var(--ok)}
 .bdg-pd{background:#FFF8E1;color:var(--warn)}
 
-/* ── MODAL ── */
-.mov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:16px}
+/* MODAL */
+.mov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:12px}
 .mov.on{display:flex}
-.mbox{background:#fff;border-radius:16px;padding:20px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.3)}
-.m-ttl{font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--primary)}
+.mbox{background:#fff;border-radius:16px;padding:18px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.m-ttl{font-size:.98rem;font-weight:700;margin-bottom:14px;color:var(--primary)}
 
-/* ── CAMERA SCANNER ── */
-.cam-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:4/3}
-#scanVid{width:100%;height:100%;object-fit:cover;display:block}
-.cam-ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-.cam-fr{width:68%;aspect-ratio:1;border:3px solid rgba(255,255,255,.85);border-radius:14px;box-shadow:0 0 0 2000px rgba(0,0,0,.38)}
-.cam-ln{position:absolute;width:60%;height:2px;background:linear-gradient(90deg,transparent,#00FF88,transparent);animation:sl 1.8s linear infinite}
-@keyframes sl{0%{top:20%}100%{top:80%}}
-.cam-st{position:absolute;bottom:16px;background:rgba(0,0,0,.72);color:#fff;padding:7px 16px;border-radius:20px;font-size:.83rem}
-.scan-res{background:var(--okl);border:2px solid var(--ok);border-radius:8px;padding:11px 14px;margin:11px 0;display:none}
+/* ── html5-qrcode カメラUI ── */
+#qrReaderDiv{width:100%;border-radius:12px;overflow:hidden;background:#111;min-height:220px;position:relative}
+/* html5-qrcodeが注入するUI要素のスタイル調整 */
+#qrReaderDiv video{width:100%!important;height:auto!important;border-radius:0!important;display:block}
+#qrReaderDiv img[alt="Info icon"]{display:none!important}
+#qrReaderDiv button{
+  background:var(--primary)!important;color:#fff!important;border:none!important;
+  padding:10px 16px!important;border-radius:8px!important;font-size:.88rem!important;
+  font-family:inherit!important;cursor:pointer!important;margin:6px 0!important
+}
+#qrReaderDiv select{height:44px!important;font-size:.88rem!important}
+.cam-status{text-align:center;font-size:.84rem;color:var(--sub);padding:8px 0;min-height:28px}
+.cam-status.error{color:var(--ng)}
+
+/* スキャン結果 */
+.scan-res{background:var(--okl);border:2px solid var(--ok);border-radius:8px;padding:10px 14px;margin:10px 0;display:none}
 .scan-res.on{display:block}
-.scan-val{font-size:.88rem;font-weight:700;word-break:break-all;color:var(--ok)}
+.scan-val{font-size:.86rem;font-weight:700;word-break:break-all;color:var(--ok)}
 
-/* ── OCR DRUG BLOCK ── */
-.ocr-drug-blk{background:#fafbfc;border:1.5px solid var(--bdr);border-radius:10px;padding:13px;margin-top:10px}
-.ocr-drug-ref{width:100%;height:auto;padding:10px 14px;border:1.5px solid var(--bdr);border-radius:8px;font-size:.85rem;background:#f0f0f0;color:var(--sub);font-family:inherit}
+/* 写真アップロードゾーン */
+.photo-zone{background:#F7FAFC;border:2px dashed var(--bdr);border-radius:10px;padding:14px;margin-top:10px}
+.photo-zone label{font-size:.82rem;font-weight:700;color:var(--txt);margin-bottom:8px}
+.photo-zone input[type=file]{height:auto!important;padding:10px!important;font-size:.88rem!important;border:2px solid var(--bdr)!important;border-radius:8px!important;background:#fff!important}
 
-/* ── TOAST ── */
-#toast{display:none;position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#1A202C;color:#fff;padding:12px 20px;border-radius:10px;font-size:.88rem;z-index:999;text-align:center;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.35);white-space:pre-line;line-height:1.5}
+/* OCR DRUG BLOCK */
+.ocr-drug-blk{background:#fafbfc;border:1.5px solid var(--bdr);border-radius:10px;padding:12px;margin-top:10px}
+.ocr-drug-blk.matched{border-color:var(--ok);background:var(--okl)}
+.ocr-drug-ref{width:100%;height:auto;padding:9px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:.84rem;background:#f0f0f0;color:var(--sub);font-family:inherit}
 
-/* ── PRINT ── */
+#toast{display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1A202C;color:#fff;padding:11px 18px;border-radius:10px;font-size:.86rem;z-index:999;text-align:center;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,.35);white-space:pre-line;line-height:1.5}
+
 @media print{
-  .hdr,.no-print,.brow,.usb,.dc-blk,.done-banner,.signers{display:none!important}
+  .hdr,.no-print,.brow{display:none!important}
   body,.scr{background:#fff!important}
   .card,.rb{box-shadow:none!important;border:1px solid #ccc!important}
   .scr{padding:0!important;max-width:100%!important}
 }
-
-/* ── RESPONSIVE ── */
-@media(max-width:500px){
-  .hgrid{grid-template-columns:1fr}
+@media(max-width:520px){
+  .hgrid{grid-template-columns:1fr 1fr}
   .g3{grid-template-columns:1fr 1fr}
   .g2{grid-template-columns:1fr}
-  .signers{grid-template-columns:1fr}
   .g4{grid-template-columns:1fr 1fr}
+  .pt-bar{gap:10px}
+}
+@media(max-width:380px){
+  .hgrid{grid-template-columns:1fr}
+  .g3{grid-template-columns:1fr}
+  .hbtn p{display:none}
+  .stats{gap:5px}
+  .stat-n{font-size:1.4rem}
+  .stat-l{font-size:.6rem}
 }
 @media(orientation:landscape)and(min-width:768px){.scr{max-width:900px}}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="hdr">
   <button class="btn-back" id="btnBack" onclick="goBack()">← 戻る</button>
   <div class="hdr-ttl" id="appTtl">💊 水剤調製支援システム</div>
   <span class="badge-net">🌐 OCR対応</span>
 </div>
 
-<!-- ═══════ HOME ═══════ -->
+<!-- HOME -->
 <div class="scr on" id="sHome">
   <div class="stats">
     <div class="stat"><div class="stat-n" id="stD">0</div><div class="stat-l">登録薬剤</div></div>
-    <div class="stat"><div class="stat-n" id="stT">0</div><div class="stat-l">本日の調製</div></div>
+    <div class="stat"><div class="stat-n" id="stP">0</div><div class="stat-l">薬剤師</div></div>
+    <div class="stat"><div class="stat-n" id="stT">0</div><div class="stat-l">本日調製</div></div>
     <div class="stat"><div class="stat-n" id="stOk">0</div><div class="stat-l">確認済み</div></div>
   </div>
   <div class="hgrid">
     <div class="hbtn main" onclick="nav('sRx')"><span class="ico">📋</span><h2>新規処方入力</h2><p>採取量を計算する</p></div>
-    <div class="hbtn" onclick="nav('sMaster')"><span class="ico">📦</span><h2>薬剤マスタ</h2><p>薬剤・バーコード登録</p></div>
+    <div class="hbtn" onclick="nav('sMaster')"><span class="ico">📦</span><h2>マスタ登録</h2><p>薬剤・薬剤師登録</p></div>
     <div class="hbtn" onclick="nav('sHist')"><span class="ico">📜</span><h2>調製履歴</h2><p>本日の調製記録</p></div>
     <div class="hbtn" onclick="nav('sInfo')"><span class="ico">ℹ️</span><h2>使い方</h2><p>操作方法・計算式</p></div>
   </div>
-  <div class="notice">⚠️ 最終確認は必ず薬剤師2名でダブルチェックを行ってください</div>
+  <div class="notice">⚠️ 調製後は薬剤瓶バーコードのスキャンで薬剤照合を行ってください</div>
 </div>
 
-<!-- ═══════ MASTER ═══════ -->
+<!-- MASTER -->
 <div class="scr" id="sMaster">
-  <div class="card">
-    <div class="card-ttl">📦 薬剤マスタ管理</div>
-    <button class="btn btn-p btn-blk" onclick="openDM()">＋ 新規薬剤を登録</button>
+  <div class="tabs">
+    <button class="tab-btn on" data-tab="drug" onclick="switchTab('drug')">💊 薬剤マスタ</button>
+    <button class="tab-btn" data-tab="pharm" onclick="switchTab('pharm')">👨‍⚕️ 薬剤師登録</button>
   </div>
-  <div class="card">
-    <div class="card-ttl">登録済み薬剤一覧</div>
-    <div id="drugList"></div>
+  <div class="tab-cnt" data-tab="drug">
+    <div class="card">
+      <div class="card-ttl">💊 薬剤マスタ管理</div>
+      <p style="font-size:.8rem;color:var(--sub);margin-bottom:12px;line-height:1.7">
+        OCR読み取り時はここに登録された薬剤のみ自動マッチングされます。<br>バーコードを登録すると薬剤瓶の照合が可能になります。
+      </p>
+      <button class="btn btn-p btn-blk" onclick="openDM()">＋ 新規薬剤を登録</button>
+    </div>
+    <div class="card"><div class="card-ttl">登録済み薬剤一覧</div><div id="drugList"></div></div>
+  </div>
+  <div class="tab-cnt" data-tab="pharm" style="display:none">
+    <div class="card">
+      <div class="card-ttl">👨‍⚕️ 薬剤師登録</div>
+      <p style="font-size:.82rem;color:var(--sub);margin-bottom:12px;line-height:1.7">
+        職員証のバーコードを登録すると、調製完了時にスキャンするだけで調製者が自動記録されます。
+      </p>
+      <button class="btn btn-p btn-blk" onclick="openPM()">＋ 薬剤師を登録</button>
+    </div>
+    <div class="card"><div class="card-ttl">登録済み薬剤師一覧</div><div id="pharmList"></div></div>
   </div>
 </div>
 
-<!-- ═══════ RX INPUT ═══════ -->
+<!-- RX INPUT -->
 <div class="scr" id="sRx">
-
-  <!-- 処方箋OCR読み取り -->
   <div class="card">
     <div class="card-ttl">📷 処方箋を読み取る（OCR）</div>
-    <p style="font-size:.84rem;color:var(--sub);margin-bottom:12px">
-      処方箋を撮影すると、病棟・処方日・処方医・薬剤情報を自動入力します。<br>
-      <strong style="color:var(--warn)">※ 患者IDは読み取りません（個人情報保護）</strong>
+    <p style="font-size:.82rem;color:var(--sub);margin-bottom:12px;line-height:1.7">
+      処方箋を撮影すると病棟・処方日・処方医・薬剤情報を自動入力します。<br>
+      <strong style="color:var(--primary)">マスタ登録された薬剤のみ自動マッチングします。</strong>
     </p>
-    <button class="btn btn-dk btn-blk" onclick="openOCR()">
-      📷 処方箋を撮影・読み取る
-    </button>
-    <div class="usb" style="margin-top:13px">
-      <label>🔌 外付けバーコードリーダー（薬剤瓶の照合専用）</label>
-      <input type="text" id="usbIn"
-        placeholder="ダブルチェック時に薬剤瓶をスキャン..."
-        autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-        onkeydown="onUsb(event)" readonly
-        style="background:#f7fafc;color:var(--sub)">
-      <div class="usb-hint">※ このリーダーは薬剤瓶のバーコード照合専用です。調製指示書画面でご使用ください。</div>
-    </div>
+    <button class="btn btn-dk btn-blk" onclick="openOCR()">📷 処方箋を撮影・読み取る</button>
   </div>
-
-  <!-- 処方情報（患者IDなし） -->
   <div class="card">
     <div class="card-ttl">📋 処方情報</div>
     <div class="g3">
-      <div class="fld">
-        <label>病棟・ベッド</label>
-        <input type="text" id="rxWard" placeholder="例：ICU-3" autocomplete="off">
-      </div>
-      <div class="fld">
-        <label>処方日</label>
-        <input type="text" id="rxDate" placeholder="例：2026/04/04" autocomplete="off">
-      </div>
-      <div class="fld">
-        <label>処方医</label>
-        <input type="text" id="rxDoc" placeholder="例：田中先生" autocomplete="off">
-      </div>
+      <div class="fld"><label>病棟・ベッド</label><input type="text" id="rxWard" placeholder="例：ICU-3" autocomplete="off"></div>
+      <div class="fld"><label>処方日</label><input type="text" id="rxDate" placeholder="例：2026/04/04" autocomplete="off"></div>
+      <div class="fld"><label>処方医</label><input type="text" id="rxDoc" placeholder="例：田中先生" autocomplete="off"></div>
     </div>
   </div>
-
-  <!-- 処方薬剤 -->
   <div class="card">
     <div class="card-ttl">💊 処方薬剤（最大4種）</div>
     <div id="rxRows"></div>
     <button class="btn btn-ol btn-sm no-print" id="btnAdd" onclick="addRow()">＋ 薬剤を追加</button>
   </div>
-
   <div class="brow no-print">
     <button class="btn btn-gy" onclick="clearRx()">🗑 クリア</button>
     <button class="btn btn-p" style="flex:2" onclick="calc()">⚗️ 採取量を計算</button>
   </div>
 </div>
 
-<!-- ═══════ RESULT ═══════ -->
+<!-- RESULT -->
 <div class="scr" id="sRes">
   <div class="pt-bar" id="resPt"></div>
   <div id="resCards"></div>
-
-  <div class="card no-print">
-    <div class="card-ttl">✅ ダブルチェック</div>
-    <div class="dc-blk"><div class="dc-hdr">📋 調製者チェック（1人目）</div><div id="dc1"></div></div>
-    <div class="dc-blk" style="margin-top:10px"><div class="dc-hdr">🔍 確認者チェック（2人目）</div><div id="dc2"></div></div>
-    <div class="signers">
-      <div class="fld" style="margin-bottom:0"><label>調製者氏名</label>
-        <input type="text" id="sigA" placeholder="調製した薬剤師名" autocomplete="off"></div>
-      <div class="fld" style="margin-bottom:0"><label>確認者氏名</label>
-        <input type="text" id="sigB" placeholder="確認した薬剤師名" autocomplete="off"></div>
+  <div class="card no-print" id="dcCard">
+    <div class="card-ttl">🔍 薬剤バーコード照合</div>
+    <p style="font-size:.82rem;color:var(--sub);margin-bottom:14px;line-height:1.7">
+      各薬剤の瓶バーコードをカメラでスキャンしてください。マスタのバーコードと一致すると照合OKになります。
+    </p>
+    <div id="dcItems"></div>
+    <div class="signer-card">
+      <div class="signer-ttl">👨‍⚕️ 調製者</div>
+      <div class="sig-row">
+        <input type="text" id="sigA" placeholder="氏名 または 職員証をスキャン" autocomplete="off">
+        <button class="btn btn-dk btn-sm no-print" onclick="openCam('signer_a','👨‍⚕️ 調製者の職員証をスキャン')" style="flex-shrink:0;padding:0 10px">📷</button>
+      </div>
     </div>
   </div>
-
   <div class="done-banner" id="doneBnr">
-    <div style="font-size:2.5rem;margin-bottom:8px">✅</div>
-    <h2>ダブルチェック完了</h2>
-    <p id="doneDetail"></p>
+    <div style="font-size:2.2rem;margin-bottom:8px">✅</div>
+    <h2>照合完了・調製記録済み</h2>
+    <p id="doneDetail" style="font-size:.86rem;margin-top:6px"></p>
   </div>
-
   <div class="brow no-print">
     <button class="btn btn-gy" onclick="nav('sRx')">← 処方へ</button>
     <button class="btn btn-ok" id="btnDone" onclick="completeDC()" disabled>✅ 完了・記録</button>
@@ -309,51 +325,41 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
-<!-- ═══════ HISTORY ═══════ -->
+<!-- HISTORY -->
 <div class="scr" id="sHist">
-  <div class="card">
-    <div class="card-ttl">📜 本日の調製履歴</div>
-    <div id="histList"></div>
-  </div>
+  <div class="card"><div class="card-ttl">📜 本日の調製履歴</div><div id="histList"></div></div>
   <button class="btn btn-ng btn-sm no-print" onclick="clearHist()">🗑 履歴を削除</button>
 </div>
 
-<!-- ═══════ INFO ═══════ -->
+<!-- INFO -->
 <div class="scr" id="sInfo">
   <div class="card">
     <div class="card-ttl">📐 採取量の計算式</div>
-    <div style="background:#F7FAFC;border-radius:8px;padding:14px;font-family:monospace;font-size:.95rem;line-height:2.1">
-      採取量 (mL) = 用量 (mg) ÷ (濃度 (%) × 10)<br>
-      1日量 = 採取量 × 1日回数<br>
-      総量  = 1日量 × 投与日数
+    <div style="background:#F7FAFC;border-radius:8px;padding:14px;font-family:monospace;font-size:.93rem;line-height:2.1">
+      採取量 (mL) = 用量 (mg) ÷ (濃度 (%) × 10)<br>1日量 = 採取量 × 1日回数<br>総量 = 1日量 × 投与日数
     </div>
-    <p style="margin-top:12px;font-size:.84rem;color:var(--sub)">
-      例：アセトアミノフェン 1% / 200mg / 3回/日 / 5日分<br>
-      200 ÷ (1×10) = <strong>20 mL</strong>/回 → 60mL/日 → 300mL総量
-    </p>
   </div>
   <div class="card">
-    <div class="card-ttl">📷 OCR・バーコード機能について</div>
-    <p style="font-size:.85rem;color:var(--sub);line-height:1.9">
-      <strong>処方箋OCR：</strong>Tesseract.js（日本語対応）を使用。初回のみインターネットから言語データを取得・キャッシュします。以降はキャッシュを使用するため高速です。<br>
-      <strong>読み取り項目：</strong>病棟・処方日・処方医・薬剤名（参照）・用量・回数・日数。<em>患者IDは読み取りません。</em><br>
-      <strong>バーコードリーダー：</strong>薬剤瓶のバーコードをスキャンし、処方薬剤と同一品か照合します（ダブルチェック画面）。<br>
-      <strong>注意：</strong>OCR結果は必ず目視で確認してから「適用」してください。
+    <div class="card-ttl">📱 スマホ・iPad対応について</div>
+    <p style="font-size:.83rem;color:var(--sub);line-height:2.0">
+      <strong>バーコードスキャン：</strong>html5-qrcode ライブラリを使用。iOS Safari・Android Chrome 両対応。<br>
+      <strong>スキャン対応形式：</strong>Code128、EAN-13/8、QRコード、Code39など。<br>
+      <strong>処方箋OCR：</strong>Tesseract.js（日本語対応）。初回のみCDNからデータ取得。<br>
+      <strong>注意：</strong>カメラ使用にはHTTPSまたはlocalhost環境が必要です。
     </p>
   </div>
   <div class="card">
     <div class="card-ttl">⚠️ 注意事項</div>
-    <p style="font-size:.83rem;color:var(--sub);line-height:1.9">
+    <p style="font-size:.81rem;color:var(--sub);line-height:2.0">
       ・患者IDは個人情報保護のため入力・読み取りを行いません<br>
-      ・OCRの精度は処方箋の印刷品質・撮影状態に依存します<br>
-      ・OCR結果は必ず手動で確認・修正してから使用してください<br>
+      ・OCR結果は必ず目視で確認・修正してから使用してください<br>
       ・計算結果は参考値です。最終判断は薬剤師が行ってください<br>
       ・データはこのデバイスのみに保存されます（localStorage）
     </p>
   </div>
 </div>
 
-<!-- ═══════ MODAL: 薬剤登録 ═══════ -->
+<!-- MODAL: 薬剤登録 -->
 <div class="mov" id="mDrug">
   <div class="mbox">
     <div class="m-ttl">💊 薬剤を登録・編集</div>
@@ -365,99 +371,94 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="fld"><label>濃度（%）<span style="color:red">*</span></label>
       <input type="number" id="dCn" placeholder="例：1.0" step="0.001" min="0.001" inputmode="decimal"></div>
     <div class="fld">
-      <label>バーコード（瓶照合用・スキャンまたは手入力）</label>
+      <label>バーコード（照合用）</label>
       <div style="display:flex;gap:8px">
-        <input type="text" id="dBc" placeholder="バーコード値" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1">
-        <button class="btn btn-dk btn-sm" onclick="openCam('drug_bc','💊 薬剤バーコードをスキャン')" style="flex-shrink:0">📷</button>
+        <input type="text" id="dBc" placeholder="薬剤瓶のバーコード値" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1">
+        <button class="btn btn-dk btn-sm" onclick="openCam('drug_bc','💊 薬剤バーコードをスキャン')" style="flex-shrink:0;padding:0 12px">📷</button>
       </div>
     </div>
-    <div class="fld"><label>備考（保存条件など）</label>
+    <div class="fld"><label>備考</label>
       <input type="text" id="dNt" placeholder="例：冷蔵保存・遮光" autocomplete="off"></div>
-    <div class="brow" style="margin-top:18px">
+    <div class="brow" style="margin-top:16px">
       <button class="btn btn-gy" onclick="closeDM()">キャンセル</button>
       <button class="btn btn-p" onclick="saveDrug()">💾 保存</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════ MODAL: OCR読み取り ═══════ -->
+<!-- MODAL: 薬剤師登録 -->
+<div class="mov" id="mPharm">
+  <div class="mbox">
+    <div class="m-ttl">👨‍⚕️ 薬剤師を登録・編集</div>
+    <input type="hidden" id="ePIdx">
+    <div class="fld"><label>氏名 <span style="color:red">*</span></label>
+      <input type="text" id="pNm" placeholder="例：山田 花子" autocomplete="off"></div>
+    <div class="fld"><label>役職・所属（任意）</label>
+      <input type="text" id="pRl" placeholder="例：主任薬剤師" autocomplete="off"></div>
+    <div class="fld">
+      <label>職員証バーコード</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="pBc" placeholder="職員証のバーコード値" autocomplete="off" autocorrect="off" spellcheck="false" style="flex:1">
+        <button class="btn btn-dk btn-sm" onclick="openCam('pharm_bc','👨‍⚕️ 職員証をスキャン')" style="flex-shrink:0;padding:0 12px">📷</button>
+      </div>
+    </div>
+    <div class="brow" style="margin-top:16px">
+      <button class="btn btn-gy" onclick="closePM()">キャンセル</button>
+      <button class="btn btn-p" onclick="savePharm()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: OCR -->
 <div class="mov" id="mOCR">
   <div class="mbox" style="max-width:580px">
     <div class="m-ttl">📷 処方箋を読み取る</div>
-
-    <!-- STEP 1: 写真選択 -->
     <div class="ocr-step on" id="oStep1">
-      <p style="font-size:.85rem;color:var(--sub);margin-bottom:14px;line-height:1.7">
+      <p style="font-size:.83rem;color:var(--sub);margin-bottom:14px;line-height:1.7">
         処方箋を撮影または画像を選択してください。<br>
-        <strong style="color:var(--warn)">患者IDは読み取りません。</strong>
-        病棟・処方日・処方医・薬剤情報を自動抽出します。
+        <strong style="color:var(--primary)">マスタ登録された薬剤のみ自動マッチングします。</strong>
       </p>
-      <label for="ocrFile" style="font-size:.88rem;margin-bottom:8px">処方箋の写真</label>
-      <input type="file" id="ocrFile" accept="image/*" capture="environment"
-        onchange="startOCR(this)"
-        style="width:100%;padding:12px;border:2px dashed var(--primary);border-radius:10px;font-size:.9rem;height:auto;background:#fff">
+      <input type="file" id="ocrFile" accept="image/*" capture="environment" onchange="startOCR(this)"
+        style="width:100%;padding:12px;border:2px dashed var(--primary);border-radius:10px;font-size:.88rem;height:auto;background:#fff">
       <div class="brow" style="margin-top:12px">
         <button class="btn btn-gy" onclick="closeOCR()">キャンセル</button>
       </div>
     </div>
-
-    <!-- STEP 2: 処理中 -->
     <div class="ocr-step" id="oStep2">
       <div style="text-align:center;padding:20px 0">
         <div style="font-size:1.5rem;margin-bottom:12px">📖</div>
         <div style="font-size:1rem;font-weight:600;margin-bottom:14px">処方箋を読み取り中...</div>
         <div class="pbar-wrap"><div class="pbar-fill" id="oBar"></div></div>
-        <div style="font-size:.84rem;color:var(--sub);margin-top:10px" id="oStatus">初期化中...</div>
-        <p style="font-size:.78rem;color:var(--sub);margin-top:12px">初回は日本語データのダウンロードに時間がかかる場合があります</p>
+        <div style="font-size:.82rem;color:var(--sub);margin-top:10px" id="oStatus">初期化中...</div>
+        <p style="font-size:.76rem;color:var(--sub);margin-top:12px">初回は日本語データのダウンロードに時間がかかります</p>
       </div>
     </div>
-
-    <!-- STEP 3: 結果確認 -->
     <div class="ocr-step" id="oStep3">
-      <div style="background:#E8F5E9;border:1.5px solid var(--ok);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.83rem;color:#2E7D32">
-        ✅ 読み取り完了。内容を確認・修正してから「適用」してください。
+      <div style="background:#E8F5E9;border:1.5px solid var(--ok);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.82rem;color:#2E7D32">
+        ✅ 読み取り完了。確認・修正してから「適用」してください。
       </div>
-
-      <!-- 処方情報 -->
-      <div class="card-ttl" style="margin-bottom:10px;font-size:.88rem">📋 処方情報</div>
+      <div class="card-ttl" style="margin-bottom:10px;font-size:.86rem">📋 処方情報</div>
       <div class="g3" style="margin-bottom:14px">
-        <div class="fld" style="margin-bottom:0"><label>病棟</label>
-          <input type="text" id="oWard" placeholder="読み取れませんでした" autocomplete="off"></div>
-        <div class="fld" style="margin-bottom:0"><label>処方日</label>
-          <input type="text" id="oDate" placeholder="読み取れませんでした" autocomplete="off"></div>
-        <div class="fld" style="margin-bottom:0"><label>処方医</label>
-          <input type="text" id="oDoc" placeholder="読み取れませんでした" autocomplete="off"></div>
+        <div class="fld" style="margin-bottom:0"><label>病棟</label><input type="text" id="oWard" placeholder="読み取れませんでした" autocomplete="off"></div>
+        <div class="fld" style="margin-bottom:0"><label>処方日</label><input type="text" id="oDate" placeholder="読み取れませんでした" autocomplete="off"></div>
+        <div class="fld" style="margin-bottom:0"><label>処方医</label><input type="text" id="oDoc" placeholder="読み取れませんでした" autocomplete="off"></div>
       </div>
-
-      <!-- 薬剤情報 -->
-      <div class="card-ttl" style="margin-bottom:4px;font-size:.88rem">💊 薬剤情報（薬剤マスタから選択が必要です）</div>
-      <p style="font-size:.78rem;color:var(--sub);margin-bottom:10px">OCRで読み取った薬剤名を参考に、マスタから該当薬剤を選択してください</p>
+      <div class="card-ttl" style="margin-bottom:4px;font-size:.86rem">💊 薬剤情報</div>
+      <p style="font-size:.76rem;color:var(--sub);margin-bottom:10px">🟢 緑枠 = マスタ自動マッチング済み　⬜ 白枠 = 手動選択が必要</p>
       <div id="oDrugs"></div>
-
-      <!-- 生テキスト（参考） -->
       <details style="margin-top:14px">
-        <summary style="font-size:.8rem;color:var(--sub);cursor:pointer;padding:6px 0">📄 OCR生テキストを確認する</summary>
-        <pre id="oRaw" style="font-size:.7rem;background:#f7fafc;padding:10px;border-radius:6px;margin-top:8px;white-space:pre-wrap;max-height:160px;overflow-y:auto;color:var(--sub);border:1px solid var(--bdr)"></pre>
+        <summary style="font-size:.78rem;color:var(--sub);cursor:pointer;padding:6px 0">📄 OCR生テキストを確認する</summary>
+        <pre id="oRaw" style="font-size:.68rem;background:#f7fafc;padding:10px;border-radius:6px;margin-top:8px;white-space:pre-wrap;max-height:150px;overflow-y:auto;color:var(--sub);border:1px solid var(--bdr)"></pre>
       </details>
-
       <div class="brow" style="margin-top:16px">
         <button class="btn btn-gy" onclick="closeOCR()">キャンセル</button>
         <button class="btn btn-p" onclick="applyOCR()">✅ この内容で入力</button>
       </div>
     </div>
-
-    <!-- STEP 4: エラー -->
     <div class="ocr-step" id="oStep4">
-      <div style="background:#FFEBEE;border:1.5px solid var(--ng);border-radius:8px;padding:14px;margin-bottom:14px;font-size:.85rem;color:#C62828">
-        ❌ 読み取りに失敗しました。<br>
-        <span id="oErr"></span>
+      <div style="background:#FFEBEE;border:1.5px solid var(--ng);border-radius:8px;padding:14px;margin-bottom:14px;font-size:.84rem;color:#C62828">
+        ❌ 読み取りに失敗しました。<br><span id="oErr"></span>
       </div>
-      <p style="font-size:.84rem;color:var(--sub);margin-bottom:14px">
-        処方箋をはっきりと撮影し直してください。<br>
-        ・十分な明るさで撮影<br>
-        ・文字が鮮明に見える距離<br>
-        ・傾きが少ない
-      </p>
       <div class="brow">
         <button class="btn btn-gy" onclick="closeOCR()">閉じる</button>
         <button class="btn btn-p" onclick="retryOCR()">↩ やり直す</button>
@@ -466,33 +467,33 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
-<!-- ═══════ MODAL: カメラスキャナー（薬剤バーコード照合用） ═══════ -->
+<!-- MODAL: カメラスキャナー (html5-qrcode) -->
 <div class="mov" id="mCam">
   <div class="mbox">
     <div class="m-ttl" id="camTtl">📷 バーコードをスキャン</div>
-    <div class="cam-wrap" id="camWrap">
-      <video id="scanVid" playsinline muted></video>
-      <div class="cam-ov">
-        <div class="cam-fr"></div>
-        <div class="cam-ln"></div>
-        <div class="cam-st" id="camSt">カメラを起動中...</div>
-      </div>
+
+    <!-- カメラビュー (html5-qrcodeが注入) -->
+    <div id="qrReaderDiv"></div>
+    <div class="cam-status" id="camStatus">カメラを起動中...</div>
+
+    <!-- ヒント -->
+    <div style="font-size:.74rem;color:var(--sub);text-align:center;margin-bottom:4px" id="camHint"></div>
+
+    <!-- 写真から読み取る（カメラが起動しない場合の代替） -->
+    <div class="photo-zone">
+      <label>📁 写真から読み取る（カメラが使えない場合）</label>
+      <input type="file" accept="image/*" capture="environment" id="bcPhoto"
+        onchange="bcFromPhoto(this)"
+        style="width:100%;margin-top:8px">
     </div>
-    <div id="noBD" style="display:none;background:#FFF3E0;border:1.5px solid var(--warn);border-radius:9px;padding:13px;margin:10px 0;font-size:.84rem;color:#5D4037">
-      <strong style="display:block;margin-bottom:8px">⚠️ リアルタイムスキャン非対応（iOS 17+推奨）</strong>
-      写真から読み取ることができます：
-      <div style="margin-top:10px">
-        <label style="font-size:.82rem;margin-bottom:6px">写真を選択</label>
-        <input type="file" accept="image/*" capture="environment" id="bcPhoto"
-          onchange="bcFromPhoto(this)"
-          style="height:auto;padding:10px;font-size:.9rem;border:2px solid var(--warn);border-radius:8px">
-      </div>
-    </div>
+
+    <!-- スキャン結果 -->
     <div class="scan-res" id="scanRes">
-      <div style="font-size:.76rem;color:var(--ok);font-weight:700;margin-bottom:4px">✅ 検出しました</div>
+      <div style="font-size:.74rem;color:var(--ok);font-weight:700;margin-bottom:4px">✅ 検出しました</div>
       <div class="scan-val" id="scanVal"></div>
     </div>
-    <div class="brow" style="margin-top:14px">
+
+    <div class="brow" style="margin-top:12px">
       <button class="btn btn-gy" onclick="stopCam()">✕ 閉じる</button>
       <button class="btn btn-p" id="btnUseCam" onclick="useCam()" disabled>この値を使用</button>
     </div>
@@ -503,18 +504,20 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <script>
 // ─── DATA STORE ───────────────────────────────────
-const K={D:'wm4_drugs',H:'wm4_hist',DT:'wm4_date'};
+const K={D:'wm6_drugs',H:'wm6_hist',DT:'wm6_date',P:'wm6_pharms'};
 const gD=()=>{try{return JSON.parse(localStorage.getItem(K.D)||'[]')}catch{return[]}};
 const sD=d=>localStorage.setItem(K.D,JSON.stringify(d));
+const gP=()=>{try{return JSON.parse(localStorage.getItem(K.P)||'[]')}catch{return[]}};
+const sP=p=>localStorage.setItem(K.P,JSON.stringify(p));
 const td=()=>new Date().toLocaleDateString('ja-JP');
 const gH=()=>{
   if(localStorage.getItem(K.DT)!==td()){localStorage.removeItem(K.H);localStorage.setItem(K.DT,td());}
-  try{return JSON.parse(localStorage.getItem(K.H)||'[]')}catch{return[]}
+  try{return JSON.parse(localStorage.getItem(K.H)||'[]')}catch{return[]};
 };
 const sH=h=>{localStorage.setItem(K.H,JSON.stringify(h));localStorage.setItem(K.DT,td())};
 
 // ─── NAVIGATION ───────────────────────────────────
-const TTLS={sHome:'💊 水剤調製支援システム',sMaster:'📦 薬剤マスタ',sRx:'📋 処方入力',sRes:'⚗️ 調製指示書',sHist:'📜 調製履歴',sInfo:'ℹ️ 使い方'};
+const TTLS={sHome:'💊 水剤調製支援システム',sMaster:'📦 マスタ登録',sRx:'📋 処方入力',sRes:'⚗️ 調製指示書',sHist:'📜 調製履歴',sInfo:'ℹ️ 使い方'};
 let stack=['sHome'];
 function nav(id){
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
@@ -523,16 +526,22 @@ function nav(id){
   document.getElementById('btnBack').style.display=id==='sHome'?'none':'flex';
   if(stack[stack.length-1]!==id)stack.push(id);
   window.scrollTo(0,0);
-  if(id==='sMaster')renderDrugList();
+  if(id==='sMaster')switchTab('drug');
   if(id==='sHist')renderHist();
   if(id==='sHome')updateStats();
 }
 function goBack(){stack.pop();nav(stack[stack.length-1]||'sHome')}
 
-// ─── STATS ────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  document.querySelectorAll('.tab-cnt').forEach(c=>c.style.display=c.dataset.tab===tab?'block':'none');
+  if(tab==='drug')renderDrugList();else renderPharmList();
+}
+
 function updateStats(){
-  const drugs=gD(),hist=gH();
+  const drugs=gD(),hist=gH(),pharms=gP();
   document.getElementById('stD').textContent=drugs.length;
+  document.getElementById('stP').textContent=pharms.length;
   document.getElementById('stT').textContent=hist.length;
   document.getElementById('stOk').textContent=hist.filter(h=>h.checked).length;
 }
@@ -540,18 +549,14 @@ function updateStats(){
 // ─── DRUG MASTER ──────────────────────────────────
 function renderDrugList(){
   const drugs=gD(),el=document.getElementById('drugList');
-  if(!drugs.length){
-    el.innerHTML='<div class="empty"><div class="empty-ico">💊</div><div>薬剤が登録されていません<br><small>「新規薬剤を登録」から追加してください</small></div></div>';
-    return;
-  }
+  if(!drugs.length){el.innerHTML='<div class="empty"><div class="empty-ico">💊</div><div>薬剤が登録されていません</div></div>';return;}
   el.innerHTML=drugs.map((d,i)=>`
     <div class="di">
-      <div style="font-size:1.8rem;flex-shrink:0">💊</div>
+      <div style="font-size:1.7rem;flex-shrink:0">💊</div>
       <div class="di-info">
         <div class="di-name">${e(d.name)}</div>
         <div class="di-det">${d.spec?e(d.spec)+' / ':''}濃度 <strong>${d.conc}%</strong>（${(d.conc*10).toFixed(2)} mg/mL）${d.note?' / 📝 '+e(d.note):''}</div>
-        ${d.barcode?`<div class="bc-badge">🔖 ${e(d.barcode.slice(0,30))}${d.barcode.length>30?'…':''}</div>`
-          :'<div style="font-size:.74rem;color:#aaa;margin-top:3px">バーコード未登録（任意）</div>'}
+        ${d.barcode?`<div class="bc-badge">🔖 バーコード登録済み</div>`:'<div style="font-size:.72rem;color:#aaa;margin-top:3px">⚠️ バーコード未登録（照合不可）</div>'}
       </div>
       <span class="di-cb">${d.conc}%</span>
       <div class="di-act">
@@ -591,6 +596,55 @@ function delDrug(i){
   const drugs=gD();drugs.splice(i,1);sD(drugs);renderDrugList();refreshSel();
 }
 
+// ─── PHARMACIST MASTER ────────────────────────────
+function renderPharmList(){
+  const pharms=gP(),el=document.getElementById('pharmList');
+  if(!pharms.length){el.innerHTML='<div class="empty"><div class="empty-ico">👨‍⚕️</div><div>薬剤師が登録されていません</div></div>';return;}
+  el.innerHTML=pharms.map((p,i)=>`
+    <div class="phi">
+      <div style="font-size:1.7rem;flex-shrink:0">👨‍⚕️</div>
+      <div style="flex:1;min-width:0">
+        <div class="phi-name">${e(p.name)}</div>
+        ${p.role?`<div class="phi-det">${e(p.role)}</div>`:''}
+        ${p.barcode?`<div class="bc-badge">🔖 バーコード登録済み</div>`:'<div style="font-size:.72rem;color:#aaa;margin-top:3px">バーコード未登録</div>'}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-self:flex-start">
+        <button class="btn btn-ol btn-sm" onclick="openPM(${i})">✏️</button>
+        <button class="btn btn-ng btn-sm" onclick="delPharm(${i})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+function openPM(idx=null){
+  ['pNm','pBc','pRl'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ePIdx').value='';
+  if(idx!==null){
+    const p=gP()[idx];
+    document.getElementById('pNm').value=p.name;
+    document.getElementById('pBc').value=p.barcode||'';
+    document.getElementById('pRl').value=p.role||'';
+    document.getElementById('ePIdx').value=idx;
+  }
+  document.getElementById('mPharm').classList.add('on');
+}
+function closePM(){document.getElementById('mPharm').classList.remove('on')}
+function savePharm(){
+  const name=document.getElementById('pNm').value.trim();
+  if(!name){alert('氏名を入力してください');return;}
+  const pharms=gP();
+  const pharm={name,barcode:document.getElementById('pBc').value.trim(),role:document.getElementById('pRl').value.trim()};
+  const is=document.getElementById('ePIdx').value;
+  if(is!=='')pharms[parseInt(is)]=pharm;else pharms.push(pharm);
+  sP(pharms);closePM();renderPharmList();updateStats();
+}
+function delPharm(i){
+  if(!confirm('この薬剤師を削除しますか？'))return;
+  const pharms=gP();pharms.splice(i,1);sP(pharms);renderPharmList();updateStats();
+}
+function lookupPharm(scanned){
+  const s=scanned.trim();
+  return gP().find(p=>p.barcode&&(p.barcode.trim()===s||p.barcode.includes(s)||s.includes(p.barcode)))||null;
+}
+
 // ─── RX FORM ──────────────────────────────────────
 let rowN=0;
 function initRx(){
@@ -598,7 +652,7 @@ function initRx(){
   document.getElementById('rxDate').value=new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
   document.getElementById('rxDoc').value='';
   document.getElementById('rxRows').innerHTML='';
-  rowN=0;addRow();addRow();syncBtn();
+  rowN=0;addRow();syncBtn();
 }
 function addRow(){
   if(rowN>=4)return;rowN++;const n=rowN;
@@ -627,7 +681,7 @@ function addRow(){
   document.getElementById('rxRows').appendChild(d);
   fillSel(n);syncBtn();
 }
-function rmRow(n){const e=document.getElementById('row'+n);if(e)e.remove();syncBtn()}
+function rmRow(n){const el=document.getElementById('row'+n);if(el)el.remove();syncBtn()}
 function syncBtn(){document.getElementById('btnAdd').style.display=document.querySelectorAll('.drow').length>=4?'none':'inline-flex'}
 function fillSel(n){
   const sel=document.getElementById('sel'+n);if(!sel)return;
@@ -650,21 +704,25 @@ function updPrev(n){
 function clearRx(){if(confirm('処方入力をクリアしますか？'))initRx()}
 
 // ─── OCR ──────────────────────────────────────────
-let ocrDrugsData=[];
+let ocrDrugsData=[],ocrMatchedDrugIdxs=[];
 
-function openOCR(){
-  showOStep(1);
-  document.getElementById('mOCR').classList.add('on');
-  document.getElementById('ocrFile').value='';
+function matchDrugInMaster(ocrName){
+  if(!ocrName)return -1;
+  const drugs=gD();
+  const n=ocrName.replace(/\s/g,'').toLowerCase();
+  let idx=drugs.findIndex(d=>d.name.replace(/\s/g,'').toLowerCase()===n);
+  if(idx>=0)return idx;
+  idx=drugs.findIndex(d=>{
+    const mn=d.name.replace(/\s/g,'').toLowerCase();
+    return mn.includes(n)||n.includes(mn);
+  });
+  return idx;
 }
-function closeOCR(){
-  document.getElementById('mOCR').classList.remove('on');
-  document.getElementById('ocrFile').value='';
-}
+
+function openOCR(){showOStep(1);document.getElementById('mOCR').classList.add('on');document.getElementById('ocrFile').value='';}
+function closeOCR(){document.getElementById('mOCR').classList.remove('on');document.getElementById('ocrFile').value='';}
 function retryOCR(){showOStep(1);document.getElementById('ocrFile').value='';}
-function showOStep(n){
-  for(let i=1;i<=4;i++)document.getElementById('oStep'+i).classList.toggle('on',i===n);
-}
+function showOStep(n){for(let i=1;i<=4;i++)document.getElementById('oStep'+i).classList.toggle('on',i===n);}
 
 async function startOCR(input){
   const file=input.files[0];if(!file)return;
@@ -672,23 +730,12 @@ async function startOCR(input){
   document.getElementById('oBar').style.width='0%';
   document.getElementById('oStatus').textContent='Tesseract.jsを初期化中...';
   try{
-    // Tesseract.js v4 CDN usage
-    if(typeof Tesseract==='undefined'){
-      throw new Error('Tesseract.jsが読み込まれていません。インターネット接続を確認してください。');
-    }
+    if(typeof Tesseract==='undefined')throw new Error('Tesseract.jsが読み込まれていません。インターネット接続を確認してください。');
     const{data:{text}}=await Tesseract.recognize(file,'jpn+eng',{
       logger:m=>{
-        if(m.status==='loading language traineddata'){
-          document.getElementById('oStatus').textContent='日本語データを読み込み中（初回のみ）...';
-          document.getElementById('oBar').style.width='15%';
-        } else if(m.status==='initializing tesseract'){
-          document.getElementById('oStatus').textContent='OCRエンジンを初期化中...';
-          document.getElementById('oBar').style.width='30%';
-        } else if(m.status==='recognizing text'){
-          const p=Math.round(m.progress*100);
-          document.getElementById('oBar').style.width=(30+p*0.7)+'%';
-          document.getElementById('oStatus').textContent='文字認識中... '+p+'%';
-        }
+        if(m.status==='loading language traineddata'){document.getElementById('oStatus').textContent='日本語データを読み込み中...';document.getElementById('oBar').style.width='15%';}
+        else if(m.status==='initializing tesseract'){document.getElementById('oStatus').textContent='OCRエンジンを初期化中...';document.getElementById('oBar').style.width='30%';}
+        else if(m.status==='recognizing text'){const p=Math.round(m.progress*100);document.getElementById('oBar').style.width=(30+p*0.7)+'%';document.getElementById('oStatus').textContent='文字認識中... '+p+'%';}
       }
     });
     document.getElementById('oBar').style.width='100%';
@@ -701,228 +748,207 @@ async function startOCR(input){
   }
   input.value='';
 }
-
-// ─ テキスト解析 ─────────────────────────────────
 function parseRx(text){
   const t=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
   const res={ward:null,date:null,doctor:null,drugs:[]};
-
-  // 病棟
-  const wm=t.match(/病棟[：:\s　]*([A-Za-z0-9ぁ-んァ-ン一-龯\-－]{1,20})/);
-  if(wm)res.ward=wm[1].trim();
-
-  // 処方日
-  const dm=t.match(/処方日[：:\s　]*(\d{4}[\/\-年]\d{1,2}[\/\-月]\d{1,2}日?)/);
-  if(dm)res.date=fmtD(dm[1]);
-  if(!res.date){
-    // 和暦対応
-    const dm2=t.match(/[令平昭]\s*[和成和][0-9０-９]+\s*年\s*[0-9０-９]+\s*月\s*[0-9０-９]+\s*日/);
-    if(dm2)res.date=dm2[0].replace(/\s/g,'');
-  }
-
-  // 処方医
-  const drm=t.match(/(?:処方医|担当医|主治医|医師名|Dr)[：:\s　.．]*([^\n\r\s　、。]{1,15})/);
-  if(drm)res.doctor=drm[1].trim();
-
-  // 薬剤情報
-  res.drugs=parseDrugs(t);
-  return res;
+  const wm=t.match(/病棟[：:\s　]*([A-Za-z0-9ぁ-んァ-ン一-龯\-－]{1,20})/);if(wm)res.ward=wm[1].trim();
+  const dm=t.match(/処方日[：:\s　]*(\d{4}[\/\-年]\d{1,2}[\/\-月]\d{1,2}日?)/);if(dm)res.date=fmtD(dm[1]);
+  if(!res.date){const dm2=t.match(/[令平昭]\s*[和成和][0-9０-９]+\s*年\s*[0-9０-９]+\s*月\s*[0-9０-９]+\s*日/);if(dm2)res.date=dm2[0].replace(/\s/g,'');}
+  const drm=t.match(/(?:処方医|担当医|主治医|医師名|Dr)[：:\s　.．]*([^\n\r\s　、。]{1,15})/);if(drm)res.doctor=drm[1].trim();
+  res.drugs=parseDrugs(t);return res;
 }
-
 function parseDrugs(text){
   const drugs=[];
-  // Rp番号で分割
   const rpParts=text.split(/Rp\.?\s*\d+/i);
-  if(rpParts.length>1){
-    for(const blk of rpParts.slice(1,5)){
-      const d=extractDrug(blk);
-      drugs.push(d);
-    }
-    if(drugs.some(d=>d.name||d.dose))return drugs;
-  }
-  // 薬剤名ラベルで検索
-  const nameRe=/薬剤名[：:\s　]*([^\n\r]+)/g;
-  let m;
-  while((m=nameRe.exec(text))!==null&&drugs.length<4){
-    const ctx=text.slice(m.index,m.index+400);
-    const d=extractDrug(ctx);
-    d.name=m[1].trim();
-    drugs.push(d);
-  }
-  // どちらもなければ行単位で検索
-  if(!drugs.length){
-    const lines=text.split('\n');
-    for(const ln of lines){
-      if(ln.match(/([\d.]+)\s*mg/)&&drugs.length<4){
-        const d=extractDrug(ln);
-        if(d.dose)drugs.push(d);
-      }
-    }
-  }
+  if(rpParts.length>1){for(const blk of rpParts.slice(1,5)){drugs.push(extractDrug(blk));}if(drugs.some(d=>d.name||d.dose))return drugs;}
+  const nameRe=/薬剤名[：:\s　]*([^\n\r]+)/g;let m;
+  while((m=nameRe.exec(text))!==null&&drugs.length<4){const ctx=text.slice(m.index,m.index+400);const d=extractDrug(ctx);d.name=m[1].trim();drugs.push(d);}
+  if(!drugs.length){const lines=text.split('\n');for(const ln of lines){if(ln.match(/([\d.]+)\s*mg/)&&drugs.length<4){const d=extractDrug(ln);if(d.dose)drugs.push(d);}}}
   return drugs.slice(0,4);
 }
-
 function extractDrug(text){
   const d={name:'',dose:null,freq:null,days:null};
-  // 薬剤名
-  const nm=text.match(/薬剤名[：:\s　]*([^\n\r]+)/);
-  if(nm)d.name=nm[1].trim();
-  // 用量 mg
-  const dm=text.match(/(?:用量|1回量|投与量|用量mg)[：:\s　]*([\d.]+)\s*mg/i)
-    ||text.match(/([\d.]+)\s*mg/);
-  if(dm)d.dose=parseFloat(dm[1]);
-  // 回数
-  const fm=text.match(/(?:1日|日)(\d+)回/)
-    ||text.match(/(\d+)回[\/／日]/)
-    ||text.match(/(\d+)回\s*\//);
-  if(fm)d.freq=parseInt(fm[1]);
-  // 日数
-  const dym=text.match(/(\d+)日(?:分|間|）)?/);
-  if(dym)d.days=parseInt(dym[1]);
+  const nm=text.match(/薬剤名[：:\s　]*([^\n\r]+)/);if(nm)d.name=nm[1].trim();
+  const dm=text.match(/(?:用量|1回量|投与量)[：:\s　]*([\d.]+)\s*mg/i)||text.match(/([\d.]+)\s*mg/);if(dm)d.dose=parseFloat(dm[1]);
+  const fm=text.match(/(?:1日|日)(\d+)回/)||text.match(/(\d+)回[\/／日]/);if(fm)d.freq=parseInt(fm[1]);
+  const dym=text.match(/(\d+)日(?:分|間)?/);if(dym)d.days=parseInt(dym[1]);
   return d;
 }
+function fmtD(s){return s.trim().replace(/年/g,'/').replace(/月/g,'/').replace(/日/g,'');}
 
-function fmtD(s){
-  return s.trim().replace(/年/g,'/').replace(/月/g,'/').replace(/日/g,'');
-}
-
-// ─ OCR結果を画面に表示 ────────────────────────────
 function renderOCRResult(rawText,parsed){
   document.getElementById('oWard').value=parsed.ward||'';
   document.getElementById('oDate').value=parsed.date||'';
   document.getElementById('oDoc').value=parsed.doctor||'';
   document.getElementById('oRaw').textContent=rawText;
-  ocrDrugsData=parsed.drugs;
-  const drugs=gD();
+  ocrDrugsData=parsed.drugs;ocrMatchedDrugIdxs=[];
+  const masterDrugs=gD();
   const el=document.getElementById('oDrugs');
-  if(!parsed.drugs.length){
-    el.innerHTML='<div style="font-size:.84rem;color:var(--sub);padding:10px 0">薬剤情報を自動抽出できませんでした。処方入力画面で手動で選択してください。</div>';
-    return;
-  }
-  el.innerHTML=parsed.drugs.map((d,i)=>`
-    <div class="ocr-drug-blk">
-      <div style="font-size:.8rem;font-weight:700;color:var(--primary);margin-bottom:10px">薬剤 ${i+1}</div>
-      ${d.name?`<div class="fld" style="margin-bottom:10px">
-        <label>OCRで読み取った薬剤名（参照のみ・マスタ選択が必要）</label>
-        <input class="ocr-drug-ref" type="text" value="${e(d.name)}" readonly></div>`:
-        '<div style="font-size:.8rem;color:var(--sub);margin-bottom:8px">薬剤名を自動抽出できませんでした</div>'}
-      <div class="g3">
-        <div class="fld" style="margin-bottom:0"><label>1回用量(mg)</label>
-          <input type="number" id="od${i}" value="${d.dose||''}" placeholder="mg" inputmode="decimal"></div>
-        <div class="fld" style="margin-bottom:0"><label>1日回数</label>
-          <select id="of${i}">
-            ${[1,2,3,4,6,8,12,24].map(v=>`<option value="${v}"${v===(d.freq||3)?' selected':''}>${v}回</option>`).join('')}
-          </select></div>
-        <div class="fld" style="margin-bottom:0"><label>投与日数</label>
-          <input type="number" id="oy${i}" value="${d.days||''}" placeholder="日" inputmode="numeric"></div>
-      </div>
-    </div>`).join('');
+  if(!parsed.drugs.length){el.innerHTML='<div style="font-size:.82rem;color:var(--sub);padding:10px 0">薬剤情報を自動抽出できませんでした。処方入力画面で手動で選択してください。</div>';return;}
+  el.innerHTML=parsed.drugs.map((d,i)=>{
+    const mIdx=matchDrugInMaster(d.name);ocrMatchedDrugIdxs.push(mIdx);
+    const matched=mIdx>=0;const masterDrug=matched?masterDrugs[mIdx]:null;
+    return `<div class="ocr-drug-blk${matched?' matched':''}">
+      <div style="font-size:.78rem;font-weight:700;color:${matched?'var(--ok)':'var(--primary)'};margin-bottom:10px">${matched?'✅':'💊'} 薬剤 ${i+1} ${matched?'（マスタ自動マッチング）':''}</div>
+      ${d.name?`<div class="fld" style="margin-bottom:10px"><label>OCR読み取り薬剤名</label><input class="ocr-drug-ref" type="text" value="${e(d.name)}" readonly></div>
+      ${matched?`<div style="font-size:.8rem;color:var(--ok);font-weight:600;margin-bottom:10px;padding:7px 10px;background:#fff;border-radius:6px;border:1.5px solid var(--ok)">→ マスタ：${e(masterDrug.name)}（${masterDrug.conc}%）</div>`:'<div style="font-size:.78rem;color:var(--warn);margin-bottom:10px">⚠️ マスタに一致する薬剤なし。処方入力画面で手動選択してください。</div>'}`:'<div style="font-size:.78rem;color:var(--sub);margin-bottom:8px">薬剤名を自動抽出できませんでした</div>'}
+      <div class="g3"><div class="fld" style="margin-bottom:0"><label>1回用量(mg)</label><input type="number" id="od${i}" value="${d.dose||''}" placeholder="mg" inputmode="decimal"></div>
+        <div class="fld" style="margin-bottom:0"><label>1日回数</label><select id="of${i}">${[1,2,3,4,6,8,12,24].map(v=>`<option value="${v}"${v===(d.freq||3)?' selected':''}>${v}回</option>`).join('')}</select></div>
+        <div class="fld" style="margin-bottom:0"><label>投与日数</label><input type="number" id="oy${i}" value="${d.days||''}" placeholder="日" inputmode="numeric"></div>
+      </div></div>`;
+  }).join('');
 }
-
-// ─ OCR内容を処方入力フォームに適用 ─────────────────
 function applyOCR(){
-  // 処方情報
   const ward=document.getElementById('oWard').value.trim();
   const date=document.getElementById('oDate').value.trim();
   const doc=document.getElementById('oDoc').value.trim();
   if(ward)document.getElementById('rxWard').value=ward;
   if(date)document.getElementById('rxDate').value=date;
   if(doc)document.getElementById('rxDoc').value=doc;
-
-  // 薬剤情報（行が足りなければ追加）
-  const rows=document.querySelectorAll('.drow');
   for(let i=0;i<ocrDrugsData.length&&i<4;i++){
-    // i番目の行がなければ追加
-    if(!document.getElementById('row'+(i+1)))addRow();
-    const n=i+1;
+    if(!document.getElementById('row'+(i+1)))addRow();const n=i+1;
     const dose=document.getElementById('od'+i)?.value;
     const freq=document.getElementById('of'+i)?.value;
     const days=document.getElementById('oy'+i)?.value;
-    if(dose&&document.getElementById('dose'+n))document.getElementById('dose'+n).value=dose;
-    if(freq&&document.getElementById('freq'+n))document.getElementById('freq'+n).value=freq;
-    if(days&&document.getElementById('days'+n))document.getElementById('days'+n).value=days;
+    if(dose)document.getElementById('dose'+n).value=dose;
+    if(freq)document.getElementById('freq'+n).value=freq;
+    if(days)document.getElementById('days'+n).value=days;
+    const mIdx=ocrMatchedDrugIdxs[i];
+    if(mIdx>=0){const sel=document.getElementById('sel'+n);if(sel){sel.value=mIdx;onSel(n);}}
     updPrev(n);
   }
   closeOCR();
-  showToast('✅ 処方情報を入力しました。\n各薬剤のマスタ選択と数値を確認してください。',3500);
+  const matched=ocrMatchedDrugIdxs.filter(x=>x>=0).length;
+  showToast('✅ 処方情報を入力しました。\n薬剤 '+matched+'/'+ocrDrugsData.length+' 件がマスタとマッチングされました。',3500);
 }
 
-// ─── USB バーコードリーダー ────────────────────────
-// ※ 薬剤瓶照合専用。調製指示書画面でダブルチェック時に使用
-let usbBuf='',usbTimer=null;
-function onUsb(ev){
-  // このフィールドはresult画面で使う想定だが、安全のため何もしない
-}
+// ─── カメラスキャナー (html5-qrcode) ─────────────
+let _qr=null,_mode='',_val='';
 
-// ─── カメラスキャナー（バーコード照合専用） ───────────
-let _str=null,_raf=null,_det=null,_mode='',_val='';
+const QR_FORMATS=()=>{
+  // html5-qrcode がロード済みかチェック
+  if(typeof Html5QrcodeSupportedFormats==='undefined')return [];
+  const f=Html5QrcodeSupportedFormats;
+  return[f.QR_CODE,f.CODE_128,f.EAN_13,f.EAN_8,f.CODE_39,f.ITF,f.DATA_MATRIX,f.AZTEC].filter(v=>v!==undefined);
+};
+
 async function openCam(mode,title){
   _mode=mode;_val='';
   document.getElementById('camTtl').textContent=title;
   document.getElementById('scanRes').classList.remove('on');
   document.getElementById('btnUseCam').disabled=true;
-  document.getElementById('camSt').textContent='カメラを起動中...';
   document.getElementById('bcPhoto').value='';
-  const hasBD='BarcodeDetector'in window;
-  document.getElementById('noBD').style.display=hasBD?'none':'block';
-  document.getElementById('camWrap').style.display=hasBD?'block':'none';
+  document.getElementById('camHint').textContent='';
+  if(mode.startsWith('signer_'))document.getElementById('camHint').textContent='職員証のバーコードをカメラにかざしてください';
+  else if(mode.startsWith('dc_'))document.getElementById('camHint').textContent='薬剤瓶のバーコードをカメラにかざしてください';
+  setStatus('カメラを起動中...');
+  document.getElementById('qrReaderDiv').innerHTML='';
   document.getElementById('mCam').classList.add('on');
-  if(!hasBD){document.getElementById('camSt').textContent='非対応';return;}
+
+  // 前のインスタンスをクリーンアップ
+  if(_qr){try{if(_qr.isScanning)await _qr.stop();}catch(e){}try{_qr.clear();}catch(e){}_qr=null;}
+
+  if(typeof Html5Qrcode==='undefined'){
+    setStatus('html5-qrcodeが読み込まれていません。インターネット接続を確認してください。','error');
+    return;
+  }
+
   try{
-    _str=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});
-    const v=document.getElementById('scanVid');v.srcObject=_str;await v.play();
-    let fmts=['qr_code','code_128','ean_13','ean_8','code_39','data_matrix','itf'];
-    try{const sup=await BarcodeDetector.getSupportedFormats();fmts=fmts.filter(f=>sup.includes(f));}catch{}
-    _det=new BarcodeDetector({formats:fmts.length?fmts:['code_128','ean_13']});
-    document.getElementById('camSt').textContent='バーコードをかざしてください';
-    loopCam();
+    _qr=new Html5Qrcode('qrReaderDiv',{verbose:false});
+    const fmts=QR_FORMATS();
+    const cfg={
+      fps:10,
+      qrbox:(w,h)=>({width:Math.floor(Math.min(w,h)*0.75),height:Math.floor(Math.min(w,h)*0.45)}),
+      aspectRatio:1.5,
+      ...(fmts.length?{formatsToSupport:fmts}:{})
+    };
+    await _qr.start({facingMode:'environment'},cfg,
+      (txt)=>{onBC(txt);},
+      (_err)=>{}  // per-frame errorは無視
+    );
+    setStatus('バーコードをかざしてください ✦ 枠内に収めてください');
   }catch(err){
-    document.getElementById('camSt').textContent='カメラ起動失敗';
-    document.getElementById('noBD').style.display='block';
+    const msg=String(err);
+    if(msg.includes('Permission')||msg.includes('NotAllowed')){
+      setStatus('カメラのアクセスが拒否されました。ブラウザの設定でカメラを許可してください。','error');
+    }else if(msg.includes('NotFound')||msg.includes('no camera')){
+      setStatus('カメラが見つかりません。写真から読み取ることができます。','error');
+    }else{
+      setStatus('カメラ起動失敗。写真から読み取ることができます。','error');
+    }
+    console.warn('Camera error:',err);
   }
 }
-function loopCam(){
-  if(!_str||!_det)return;
-  const v=document.getElementById('scanVid');
-  _det.detect(v).then(res=>{
-    if(res.length>0)onBC(res[0].rawValue);
-    else _raf=requestAnimationFrame(loopCam);
-  }).catch(()=>{_raf=requestAnimationFrame(loopCam)});
+
+function setStatus(msg,cls=''){
+  const el=document.getElementById('camStatus');
+  el.textContent=msg;el.className='cam-status'+(cls?' '+cls:'');
 }
+
+async function stopCam(){
+  if(_qr){
+    try{if(_qr.isScanning)await _qr.stop();}catch(e){}
+    try{_qr.clear();}catch(e){}
+    _qr=null;
+  }
+  document.getElementById('qrReaderDiv').innerHTML='';
+  document.getElementById('mCam').classList.remove('on');
+  _val='';
+}
+
 async function bcFromPhoto(input){
   const file=input.files[0];if(!file)return;
-  if(!('BarcodeDetector'in window)){alert('BarcodeDetectorに対応していません');return;}
+  setStatus('写真を解析中...');
+
+  // カメラが動いていたら一時停止
+  if(_qr&&_qr.isScanning){try{await _qr.stop();}catch(e){}}
+
+  if(typeof Html5Qrcode==='undefined'){
+    showToast('html5-qrcodeが読み込まれていません',2500,true);return;
+  }
+
+  // 一時的なDIVで解析
+  const tmpId='_tmpQr_'+Date.now();
+  const tmp=document.createElement('div');
+  tmp.id=tmpId;tmp.style.display='none';
+  document.body.appendChild(tmp);
+  const scanner=new Html5Qrcode(tmpId,{verbose:false});
+
   try{
-    const img=new Image();img.src=URL.createObjectURL(file);
-    await new Promise((res,rej)=>{img.onload=res;img.onerror=rej});
-    const det=new BarcodeDetector({formats:['code_128','ean_13','ean_8','qr_code','code_39']});
-    const results=await det.detect(img);
-    URL.revokeObjectURL(img.src);
-    if(results.length>0)onBC(results[0].rawValue);
-    else showToast('バーコードが見つかりませんでした',2500,true);
-  }catch(err){alert('読み取り失敗: '+err.message);}
+    const result=await scanner.scanFile(file,false);
+    onBC(result);
+  }catch(err){
+    showToast('バーコードが読み取れませんでした\n・明るい場所で撮影\n・バーコードが画面全体に大きく写るように',4000,true);
+    setStatus('写真から読み取れませんでした','error');
+  }finally{
+    try{scanner.clear();}catch(e){}
+    document.body.removeChild(tmp);
+  }
   input.value='';
 }
+
 function onBC(val){
   _val=val;
   document.getElementById('scanVal').textContent=val;
   document.getElementById('scanRes').classList.add('on');
-  document.getElementById('camSt').textContent='✅ 検出！';
   document.getElementById('btnUseCam').disabled=false;
-  if(_raf){cancelAnimationFrame(_raf);_raf=null;}
+  setStatus('✅ バーコードを検出しました！');
   if(navigator.vibrate)navigator.vibrate([80]);
+  // カメラを自動停止
+  if(_qr&&_qr.isScanning){_qr.stop().catch(()=>{});}
 }
-function stopCam(){
-  if(_raf){cancelAnimationFrame(_raf);_raf=null;}
-  if(_str){_str.getTracks().forEach(t=>t.stop());_str=null;}
-  document.getElementById('mCam').classList.remove('on');
-  _val='';
-}
+
 function useCam(){
   if(!_val)return;
   const val=_val;stopCam();
-  if(_mode==='drug_bc')document.getElementById('dBc').value=val;
-  else if(_mode.startsWith('dc_'))verifyBC(parseInt(_mode.replace('dc_','')),val);
+  if(_mode==='drug_bc'){document.getElementById('dBc').value=val;}
+  else if(_mode==='pharm_bc'){document.getElementById('pBc').value=val;}
+  else if(_mode==='signer_a'){
+    const p=lookupPharm(val);
+    if(p){document.getElementById('sigA').value=p.name;showToast('✅ 調製者: '+p.name+(p.role?' ('+p.role+')':''));}
+    else{showToast('⚠️ 薬剤師マスタに未登録です\n先にマスタ登録してください',3000,true);}
+  }
+  else if(_mode.startsWith('dc_')){verifyBC(parseInt(_mode.replace('dc_','')),val);}
 }
 
 // ─── CALCULATION ──────────────────────────────────
@@ -949,7 +975,6 @@ function calc(){
   renderRes(curRx);nav('sRes');
 }
 
-// ─── RENDER RESULT ────────────────────────────────
 function renderRes(data){
   document.getElementById('resPt').innerHTML=[['病棟',data.ward||'---'],['処方日',data.date||'---'],['処方医',data.doctor||'---']].map(([l,v])=>`<div><div class="pi-l">${l}</div><div class="pi-v">${e(v)}</div></div>`).join('');
   document.getElementById('resCards').innerHTML=data.items.map((it,i)=>`
@@ -961,88 +986,90 @@ function renderRes(data){
       <div class="rrow"><span class="rl">1日量</span><span class="rv">${it.vDay.toFixed(2)} mL</span></div>
       <div class="rrow"><span class="rl">総量（${it.days}日）</span><span class="rv">${it.vTot.toFixed(2)} mL</span></div>
       <div class="formula">${it.dose}mg ÷ (${it.drug.conc}% × 10) = ${it.vd.toFixed(2)} mL/回</div>
-      ${it.drug.note?`<div style="margin-top:8px;font-size:.78rem;color:var(--warn)">📝 ${e(it.drug.note)}</div>`:''}
+      ${it.drug.note?`<div style="margin-top:8px;font-size:.76rem;color:var(--warn)">📝 ${e(it.drug.note)}</div>`:''}
     </div>`).join('');
   buildDC(data);
   document.getElementById('doneBnr').classList.remove('on');
   document.getElementById('btnDone').disabled=true;
   document.getElementById('sigA').value='';
-  document.getElementById('sigB').value='';
 }
 
-// ─── DOUBLE CHECK ─────────────────────────────────
-let dcSt={};
+// ─── DOUBLE CHECK: バーコード照合のみ ─────────────
+let bcVerified=[];
 function buildDC(data){
-  dcSt={};
-  const it1=[
-    {id:'rx',text:'処方箋の病棟・処方日・処方医を目視確認した'},
-    ...data.items.map((it,i)=>({id:'d'+i,text:'薬剤'+(i+1)+'：'+it.drug.name+' の瓶ラベルを目視確認した',hasScan:!!it.drug.barcode,dIdx:i})),
-    ...data.items.map((it,i)=>({id:'v'+i,text:'薬剤'+(i+1)+'：採取量 '+it.vd.toFixed(2)+' mL を採取した'})),
-    data.items.length>1?{id:'mx',text:'混合後に配合変化（沈殿・変色）がないことを確認した'}:null,
-    {id:'ev',text:'清潔操作で調製した'}
-  ].filter(Boolean);
-  const it2=[
-    {id:'rp',text:'処方箋と調製指示書の内容が一致することを確認した'},
-    ...data.items.map((it,i)=>({id:'vd'+i,text:'薬剤'+(i+1)+'：'+it.drug.name+' が正しい薬剤か確認した',hasScan:!!it.drug.barcode,dIdx:i})),
-    ...data.items.map((it,i)=>({id:'vc'+i,text:'薬剤'+(i+1)+'：採取量 '+it.vd.toFixed(2)+' mL を計算で確認した'})),
-    {id:'lb',text:'病棟・処方日の記載を確認した'}
-  ];
-  document.getElementById('dc1').innerHTML=it1.map(it=>dcH(it,1)).join('');
-  document.getElementById('dc2').innerHTML=it2.map(it=>dcH(it,2)).join('');
+  bcVerified=data.items.map(()=>false);
+  const el=document.getElementById('dcItems');
+  el.innerHTML=data.items.map((it,i)=>{
+    const hasBC=!!it.drug.barcode;
+    if(!hasBC)bcVerified[i]=true; // バーコード未登録はスキップ
+    return `<div class="bc-card" id="bcCard${i}">
+      <div class="bc-card-hdr">
+        <div class="bc-drug-name">薬剤${i+1}：${e(it.drug.name)}</div>
+        <div class="bc-status pending" id="bcSt${i}">${hasBC?'未照合':'未登録'}</div>
+      </div>
+      <div class="bc-card-body">
+        <div class="bc-vol">採取量 <strong>${it.vd.toFixed(2)} mL</strong>/回 × ${it.freq}回/日 × ${it.days}日分 ＝ 総量 ${it.vTot.toFixed(2)} mL</div>
+        ${hasBC?`<div class="bc-scan-row">
+          <button class="btn btn-dk btn-sm no-print" id="bcBtn${i}" onclick="startDC(${i})">📷 薬剤瓶をスキャン</button>
+          <div class="bc-scan-val" id="bcVal${i}">スキャン待ち...</div>
+        </div>
+        <div class="bc-expected" id="bcExp${i}">マスタ登録値: ${e(it.drug.barcode.slice(0,40))}${it.drug.barcode.length>40?'…':''}</div>`
+        :`<div style="font-size:.8rem;color:var(--warn);padding:6px 0">⚠️ バーコード未登録 — 薬剤マスタにバーコードを登録してください</div>`}
+      </div>
+    </div>`;
+  }).join('');
+  updateDoneBtn();
 }
-function dcH(it,list){
-  const sb=it.hasScan!==undefined?(it.hasScan
-    ?`<button class="btn btn-dk btn-sm no-print" onclick="event.stopPropagation();startDC(${it.dIdx})">📷 バーコード照合</button>`
-    :`<button class="btn btn-gy btn-sm no-print" style="opacity:.35;font-size:.75rem" title="バーコード未登録">📷 未登録</button>`):'';
-  return`<div class="dc-it" id="di_${list}_${it.id}" onclick="togDC('${list}_${it.id}')"><input type="checkbox" id="dc_${list}_${it.id}" onclick="event.stopPropagation();togDC('${list}_${it.id}',true)"><div class="dc-lbl">${e(it.text)}</div>${sb}</div>`;
-}
-function togDC(key,fromCb=false){
-  const cb=document.getElementById('dc_'+key);
-  const item=document.getElementById('di_'+key);
-  if(!fromCb)cb.checked=!cb.checked;
-  item.classList.toggle('done',cb.checked);
-  dcSt[key]=cb.checked;chkAll();
-}
-function chkAll(){
-  const all=document.querySelectorAll('#dc1 input[type=checkbox],#dc2 input[type=checkbox]');
-  document.getElementById('btnDone').disabled=!Array.from(all).every(cb=>cb.checked);
-}
+
 function startDC(dIdx){
   const drug=curRx.items[dIdx].drug;
   if(!drug.barcode){alert('この薬剤にバーコードが登録されていません。\n薬剤マスタで登録してください。');return;}
-  openCam('dc_'+dIdx,'📷 薬剤'+(dIdx+1)+'：'+drug.name+' のバーコードを照合');
+  openCam('dc_'+dIdx,'📷 薬剤'+(dIdx+1)+'：'+drug.name+' の瓶をスキャン');
 }
+
 function verifyBC(dIdx,scanned){
   const drug=curRx.items[dIdx].drug;
   const exp=drug.barcode.trim(),act=scanned.trim();
   const ok=act===exp||act.includes(exp)||exp.includes(act);
+  const card=document.getElementById('bcCard'+dIdx);
+  const st=document.getElementById('bcSt'+dIdx);
+  const val=document.getElementById('bcVal'+dIdx);
+  const btn=document.getElementById('bcBtn'+dIdx);
   if(ok){
-    showToast('✅ 薬剤'+(dIdx+1)+'：'+drug.name+'\nバーコード照合OK！');
-    ['1_d'+dIdx,'2_vd'+dIdx].forEach(k=>{
-      const cb=document.getElementById('dc_'+k);
-      if(cb&&!cb.checked)togDC(k,false);
-    });
+    bcVerified[dIdx]=true;
+    card.classList.remove('error');card.classList.add('verified');
+    st.className='bc-status ok';st.textContent='✅ 照合OK';
+    val.className='bc-scan-val ok';val.textContent='✅ 一致: '+act;
+    if(btn){btn.textContent='✅ 照合済み';btn.className='btn btn-ok btn-sm';btn.disabled=true;}
+    showToast('✅ 薬剤'+(dIdx+1)+'：'+drug.name+'\n照合OK！');
+    if(navigator.vibrate)navigator.vibrate([100,50,100]);
   }else{
-    showToast('❌ バーコードが一致しません！\n期待値：'+exp+'\n読取値：'+act,5000,true);
+    card.classList.remove('verified');card.classList.add('error');
+    st.className='bc-status ng';st.textContent='❌ 不一致';
+    val.className='bc-scan-val ng';val.textContent='❌ 読取値: '+act;
+    showToast('❌ バーコードが一致しません！\n期待値: '+exp.slice(0,30)+'\n読取値: '+act.slice(0,30),5000,true);
+    if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);
   }
+  updateDoneBtn();
+}
+function updateDoneBtn(){
+  document.getElementById('btnDone').disabled=!bcVerified.every(v=>v===true);
 }
 
-// ─── COMPLETE DC ──────────────────────────────────
 function completeDC(){
   const a=document.getElementById('sigA').value.trim();
-  const b=document.getElementById('sigB').value.trim();
-  if(!a||!b){alert('調製者・確認者の氏名を入力してください');return;}
-  if(a===b){alert('調製者と確認者は別の薬剤師が必要です');return;}
+  if(!a){alert('調製者の氏名を入力またはスキャンしてください');return;}
+  const now=new Date();
   const hist=gH();
-  const entry={...curRx,checked:true,preparer:a,checker:b,completedAt:new Date().toLocaleTimeString('ja-JP')};
+  const entry={...curRx,checked:true,preparer:a,completedAt:now.toLocaleTimeString('ja-JP'),completedDate:now.toLocaleDateString('ja-JP')};
   hist.push(entry);sH(hist);
   const bnr=document.getElementById('doneBnr');bnr.classList.add('on');
-  document.getElementById('doneDetail').textContent='調製：'+a+' ／ 確認：'+b+' ／ '+entry.completedAt;
+  document.getElementById('doneDetail').textContent='調製者：'+a+'\n'+entry.completedDate+' '+entry.completedAt;
   document.getElementById('btnDone').disabled=true;
+  updateStats();
   bnr.scrollIntoView({behavior:'smooth'});
 }
 
-// ─── HISTORY ──────────────────────────────────────
 function renderHist(){
   const hist=gH(),el=document.getElementById('histList');
   if(!hist.length){el.innerHTML='<div class="empty"><div class="empty-ico">📋</div><div>本日の記録がありません</div></div>';return;}
@@ -1054,7 +1081,7 @@ function renderHist(){
         <span class="hi-time">${h.completedAt||''}</span>
       </div>
       <div class="hi-drugs">${h.items.map((it,i)=>'薬剤'+(i+1)+'：'+it.drug.name+' '+it.vd.toFixed(2)+'mL×'+it.freq+'回×'+it.days+'日').join(' ／ ')}</div>
-      ${h.preparer?`<div class="hi-sig">調製：${e(h.preparer)} ／ 確認：${e(h.checker)}</div>`:''}
+      ${h.preparer?`<div class="hi-sig">👨‍⚕️ 調製：${e(h.preparer)} ／ ${e(h.completedDate+' '+h.completedAt)}</div>`:''}
     </div>`).join('');
 }
 function clearHist(){
@@ -1062,7 +1089,6 @@ function clearHist(){
   localStorage.removeItem(K.H);renderHist();updateStats();
 }
 
-// ─── TOAST ────────────────────────────────────────
 let _tt=null;
 function showToast(msg,dur=2500,isErr=false){
   const t=document.getElementById('toast');
@@ -1071,23 +1097,13 @@ function showToast(msg,dur=2500,isErr=false){
   if(_tt)clearTimeout(_tt);
   _tt=setTimeout(()=>{t.style.display='none'},dur);
 }
-
-// ─── UTILS ────────────────────────────────────────
 const e=s=>s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';
 
-// ─── INIT ─────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
   initRx();updateStats();
   document.querySelectorAll('.mov').forEach(m=>{
-    m.addEventListener('click',ev=>{
-      if(ev.target===m){stopCam();closeDM();closeOCR();}
-    });
+    m.addEventListener('click',ev=>{if(ev.target===m){stopCam();closeDM();closePM();closeOCR();}});
   });
-  if(typeof Tesseract==='undefined'){
-    console.warn('Tesseract.jsが読み込まれていません。インターネット接続を確認してください。');
-  }else{
-    console.log('✅ Tesseract.js 読み込み済み');
-  }
 });
 </script>
 </body>
